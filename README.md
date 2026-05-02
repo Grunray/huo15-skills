@@ -26,7 +26,7 @@
 <div align="center">
 
 ![Skills](https://img.shields.io/badge/skills-27-blue)
-![License](https://img.shields.io/badge/license-MIT--0-green)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-compatible-orange)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-7c3aed)
 ![ClawHub](https://img.shields.io/badge/ClawHub-published-ff6b6b)
@@ -95,7 +95,7 @@ huo15-skills/
 
 ## 技能列表（按类别）
 
-> 共 **27** 个 skill。全部为 **MIT-0**（无需署名，可自由商用）。
+> 共 **27** 个 skill。全部采用 **MIT License**（可自由商用 / 修改 / 再发布，需保留版权声明 © 青岛火一五信息科技有限公司）。
 
 ### 一、OpenClaw 工程模式（PR / Plan / Verify / Explore）
 
@@ -292,7 +292,14 @@ https://clawhub.ai/skills/huo15-searxng
 
 ## License
 
-全部 skill 默认 **MIT-0**（无需署名，可自由商用、修改、再发布）。
+全部 skill 采用 **MIT License**（[`LICENSE`](LICENSE)）。
+
+- ✅ 可自由商用、修改、再发布、内部 / 外部部署
+- ⚠️ **必须保留版权声明**：`Copyright (c) 2026 青岛火一五信息科技有限公司`
+- ⚠️ **必须保留 LICENSE 文本**：在你分发的副本里附上完整的 MIT License
+
+衍生作品 / fork / 二次封装到自家产品时，最简做法是把 `LICENSE` 文件原样带上，
+或在你产品的 LICENSES / NOTICE / 关于页面里附上上述版权声明 + MIT 授权全文。
 
 ---
 
@@ -319,8 +326,8 @@ A：可以。`git clone` 后把 `<slug>/` 目录复制到 `~/.openclaw/workspace
 **Q：版本想固定，不想跟随升级？**
 A：`clawhub install <slug>@<version>`；不传 version 默认装最新。
 
-**Q：MIT-0 真的能商用？要署名吗？**
-A：不需要署名，可商用、修改、再发布。但欢迎在 README 标一句"基于 huo15-skills"作为社区惯例。
+**Q：MIT License 能商用吗？要怎么署名？**
+A：可商用、修改、再发布。**必须保留两样东西**：(1) 版权声明 `Copyright (c) 2026 青岛火一五信息科技有限公司`；(2) MIT License 全文。最简做法是直接把仓库根目录的 `LICENSE` 文件原样带到你的衍生作品里。
 
 ---
 
