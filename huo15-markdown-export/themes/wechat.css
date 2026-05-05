@@ -1,0 +1,121 @@
+/* huo15-markdown-export — 微信公众号风
+ * 输出后会被 juice 内联化(微信编辑器只接受 inline style)
+ * 不用 grid/flex/var/calc(微信富文本剥离这些)
+ */
+
+body {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.75;
+  margin: 0;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.markdown-body { max-width: 100%; margin: 0; }
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  font-weight: 700;
+  margin: 1.4em 0 0.8em;
+  color: #1a1a1a;
+}
+.markdown-body h1 {
+  font-size: 22px;
+  text-align: center;
+  padding: 0.4em 0;
+  border-bottom: 2px solid #333;
+}
+.markdown-body h2 {
+  font-size: 19px;
+  padding: 0.2em 0.6em;
+  border-left: 4px solid #c0392b;
+  background: #f9f2f0;
+}
+.markdown-body h3 {
+  font-size: 17px;
+  color: #c0392b;
+}
+
+.markdown-body p {
+  margin: 1em 0;
+  text-align: justify;
+  letter-spacing: 0.04em;
+}
+
+.markdown-body a {
+  color: #c0392b;
+  text-decoration: none;
+  border-bottom: 1px dashed #c0392b;
+}
+
+.markdown-body strong { color: #c0392b; font-weight: 700; }
+
+.markdown-body blockquote {
+  margin: 1em 0;
+  padding: 0.6em 1em;
+  border-left: 4px solid #c0392b;
+  background: #f9f2f0;
+  color: #555;
+}
+
+.markdown-body ul, .markdown-body ol { padding-left: 1.6em; margin: 1em 0; }
+.markdown-body li { margin: 0.3em 0; }
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px dashed #cccccc;
+  margin: 1.6em 0;
+}
+
+.markdown-body code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  background: #f6f6f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #c0392b;
+}
+.markdown-body pre {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 14px 16px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 1em 0;
+}
+.markdown-body pre code {
+  background: transparent;
+  color: #f8f8f2;
+  padding: 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 14px;
+}
+.markdown-body table th, .markdown-body table td {
+  border: 1px solid #dddddd;
+  padding: 8px 12px;
+}
+.markdown-body table th {
+  background: #c0392b;
+  color: #ffffff;
+  font-weight: 700;
+}
+.markdown-body table tr:nth-child(2n) { background: #fafafa; }
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+  border-radius: 4px;
+}
+
+.mermaid { text-align: center; margin: 1em 0; }

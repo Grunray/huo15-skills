@@ -1,0 +1,78 @@
+# ───────────────────────────── Node / npm ─────────────────────────────
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.eslintcache
+.node_repl_history
+
+# ───────────────────────── Puppeteer / Chromium ────────────────────────
+# (本地用户级缓存默认在 ~/.cache/puppeteer,不在仓库;留兜底)
+.cache/
+.local-chromium/
+
+# ─────────────────────────── 临时 / 备份 ───────────────────────────────
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+*.log
+
+# ────────────────────── examples 渲染产出(保留 .md 源)─────────────────
+examples/*
+!examples/*.md
+!examples/.gitkeep
+
+# ────────────────────── md-share 临时输出兜底 ───────────────────────────
+# md-share.sh 默认 mktemp -d 到 /tmp/huo15-md-share.XXXXXX,不在仓库内;
+# 但用户用 --output-dir . 时会落到仓库,这里兜底。
+huo15-md-share.*/
+*.huo15-share.*
+
+# ──────────────── 用户私有的自定义 reference.docx 备份 ─────────────────
+templates/reference.docx.bak
+templates/reference-*.docx
+!templates/reference.docx
+
+# ─────────────────────────── 编辑器 ────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+.fleet/
+.cursor/
+
+# ─────────────────────────── 操作系统 ──────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─────────────────── 环境变量 / 密钥(防 §11.4 红线 #7)─────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets.json
+.npmrc
+.clawhubrc
+
+# ───────────────────────── 打包产物(未来可能)─────────────────────────
+dist/
+build/
+out/
+*.tgz
+
+# ──────────────────────── ClawHub publish 元数据 ───────────────────────
+# (_meta.json 是产物元数据要 commit;但 publish 过程产生的临时文件 ignore)
+.clawhub/
+*.clawhub-tmp

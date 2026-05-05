@@ -1,0 +1,77 @@
+/* huo15-markdown-export — GitHub 风
+ * 与 GitHub README 视觉一致:技术文档 / API 文档 / 开源项目
+ */
+
+:root {
+  --fg: #1f2328;
+  --muted: #59636e;
+  --rule: #d1d9e0;
+  --accent: #0969da;
+  --code-bg: #f6f8fa;
+  --quote-bar: #d1d9e0;
+  --max-w: 980px;
+}
+
+html, body { background: #ffffff; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, "Noto Sans SC", "PingFang SC", sans-serif;
+  color: var(--fg);
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 32px 16px;
+}
+
+.markdown-body { max-width: var(--max-w); margin: 0 auto; }
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 24px 0 16px;
+}
+.markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--rule); }
+.markdown-body h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid var(--rule); }
+.markdown-body h3 { font-size: 1.25em; }
+.markdown-body h4 { font-size: 1em; }
+
+.markdown-body p { margin-top: 0; margin-bottom: 16px; }
+.markdown-body a { color: var(--accent); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body strong { font-weight: 600; }
+
+.markdown-body blockquote {
+  margin: 0 0 16px;
+  padding: 0 1em;
+  color: var(--muted);
+  border-left: 0.25em solid var(--quote-bar);
+}
+
+.markdown-body ul, .markdown-body ol { padding-left: 2em; margin-top: 0; margin-bottom: 16px; }
+.markdown-body hr { border: 0; border-top: 1px solid var(--rule); margin: 24px 0; }
+
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 85%;
+  background: rgba(175, 184, 193, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+}
+.markdown-body pre {
+  background: var(--code-bg);
+  padding: 16px;
+  border-radius: 6px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+}
+.markdown-body pre code { background: transparent; padding: 0; }
+
+.markdown-body table { display: block; width: max-content; max-width: 100%; overflow: auto; border-collapse: collapse; margin-bottom: 16px; }
+.markdown-body table th, .markdown-body table td { padding: 6px 13px; border: 1px solid var(--rule); }
+.markdown-body table th { font-weight: 600; background: var(--code-bg); }
+.markdown-body table tr:nth-child(2n) { background: #f6f8fa; }
+
+.markdown-body img { max-width: 100%; height: auto; }
+
+.mermaid { text-align: center; margin: 16px 0; }

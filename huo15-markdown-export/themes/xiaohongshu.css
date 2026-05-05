@@ -1,0 +1,131 @@
+/* huo15-markdown-export — 小红书长图风
+ * 1080px 宽设计基线;暖色系 / 大字号 / 强调感叹气
+ * 配合 md2image.js 输出 PNG 长图
+ */
+
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #333;
+  font-size: 32px;
+  line-height: 1.75;
+  margin: 0;
+  padding: 60px 50px;
+  background: linear-gradient(180deg, #fff5f0 0%, #fff8f3 100%);
+  width: 1080px;
+  box-sizing: border-box;
+}
+
+.markdown-body { max-width: 100%; margin: 0; }
+
+.markdown-body h1 {
+  font-size: 56px;
+  font-weight: 800;
+  color: #ff2741;
+  text-align: center;
+  margin: 0 0 32px;
+  padding: 24px 0;
+  border-bottom: 4px dashed #ffb6b6;
+  letter-spacing: 0.02em;
+}
+.markdown-body h2 {
+  font-size: 42px;
+  font-weight: 800;
+  color: #ff2741;
+  margin: 40px 0 20px;
+  padding-left: 20px;
+  border-left: 8px solid #ff2741;
+}
+.markdown-body h3 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #d23148;
+  margin: 32px 0 16px;
+}
+
+.markdown-body p {
+  margin: 20px 0;
+  text-align: justify;
+}
+
+.markdown-body a {
+  color: #ff2741;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.markdown-body strong {
+  color: #ff2741;
+  font-weight: 800;
+  background: linear-gradient(180deg, transparent 60%, #ffe5dc 60%);
+  padding: 0 4px;
+}
+
+.markdown-body em { color: #d23148; font-style: normal; }
+
+.markdown-body blockquote {
+  margin: 24px 0;
+  padding: 24px 28px;
+  background: #fff5f0;
+  border-left: 8px solid #ff2741;
+  border-radius: 12px;
+  font-size: 30px;
+  color: #555;
+}
+
+.markdown-body ul, .markdown-body ol { padding-left: 1.4em; margin: 20px 0; }
+.markdown-body li { margin: 10px 0; }
+
+.markdown-body hr {
+  border: none;
+  border-top: 3px dashed #ffb6b6;
+  margin: 40px 0;
+}
+
+.markdown-body code {
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 28px;
+  background: #fff0e8;
+  color: #ff2741;
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+
+.markdown-body pre {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 24px 28px;
+  border-radius: 12px;
+  overflow-x: auto;
+  font-size: 26px;
+  line-height: 1.6;
+}
+.markdown-body pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 24px 0;
+  font-size: 28px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.markdown-body table th, .markdown-body table td {
+  border: 2px solid #ffe5dc;
+  padding: 14px 18px;
+}
+.markdown-body table th {
+  background: #ff2741;
+  color: #ffffff;
+}
+.markdown-body table tr:nth-child(2n) { background: #fff8f3; }
+
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 24px auto;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 39, 65, 0.15);
+}
+
+.mermaid { text-align: center; margin: 24px 0; background: #fff; padding: 20px; border-radius: 12px; }

@@ -1,0 +1,101 @@
+/* huo15-markdown-export — Academic 学术论文风
+ * 衬线 / 双倍行高 / 编号样式 / 适合 IEEE/ACM/Springer 风格论文初稿
+ */
+
+:root {
+  --fg: #000;
+  --muted: #555;
+  --rule: #999;
+  --accent: #1a1a8a;
+  --code-bg: #f4f4f4;
+  --max-w: 760px;
+}
+
+html, body { background: #ffffff; }
+body {
+  font-family: "Times New Roman", "Liberation Serif", "Noto Serif SC", "Songti SC", serif;
+  color: var(--fg);
+  font-size: 12pt;
+  line-height: 1.6;
+  margin: 0;
+  padding: 1in 1.25in;
+}
+
+.markdown-body { max-width: var(--max-w); margin: 0 auto; }
+
+.markdown-body h1 {
+  font-size: 1.6em;
+  text-align: center;
+  font-weight: 700;
+  margin: 0 0 0.4em;
+  letter-spacing: 0.02em;
+}
+.markdown-body h2 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 1.4em 0 0.6em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.markdown-body h3 {
+  font-size: 1.05em;
+  font-weight: 700;
+  font-style: italic;
+  margin: 1.2em 0 0.4em;
+}
+.markdown-body h4 { font-size: 1em; font-weight: 700; margin: 1em 0 0.4em; }
+
+.markdown-body p { margin: 0 0 0.8em; text-indent: 2em; text-align: justify; }
+.markdown-body p:first-of-type, .markdown-body h1 + p, .markdown-body h2 + p, .markdown-body h3 + p { text-indent: 0; }
+
+.markdown-body a { color: var(--accent); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+
+.markdown-body blockquote {
+  margin: 1em 2em;
+  font-size: 0.95em;
+  color: var(--muted);
+  border-left: 3px solid var(--rule);
+  padding-left: 1em;
+}
+
+.markdown-body ul, .markdown-body ol { padding-left: 2em; margin: 0.6em 0; }
+
+.markdown-body code {
+  font-family: "Latin Modern Mono", "Courier New", monospace;
+  font-size: 0.95em;
+  background: var(--code-bg);
+  padding: 0 0.3em;
+}
+.markdown-body pre {
+  background: var(--code-bg);
+  padding: 0.8em 1em;
+  border-left: 3px solid var(--rule);
+  font-size: 0.9em;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 0.95em;
+}
+.markdown-body table th, .markdown-body table td {
+  border: none;
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+.markdown-body table thead { border-top: 2px solid #000; border-bottom: 1px solid #000; }
+.markdown-body table tbody { border-bottom: 2px solid #000; }
+.markdown-body table th { font-weight: 700; }
+
+.markdown-body img { max-width: 100%; height: auto; display: block; margin: 1em auto; }
+.markdown-body img + em { display: block; text-align: center; font-size: 0.9em; margin-top: 0.4em; font-style: italic; }
+
+.markdown-body hr { border: none; border-top: 1px solid var(--rule); margin: 1.6em 0; }
+
+.markdown-body .footnotes { font-size: 0.88em; border-top: 1px solid var(--rule); margin-top: 2em; padding-top: 0.6em; }
+
+.mermaid { text-align: center; margin: 1.2em 0; }

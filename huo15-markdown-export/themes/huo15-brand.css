@@ -1,0 +1,136 @@
+/* huo15-markdown-export — 火一五品牌风
+ * 公司对外报告 / 客户交付件:沉稳商务,主色 #c0392b(火)
+ * 用于:复盘报告、技术白皮书、客户提案、内部周报
+ */
+
+:root {
+  --brand: #c0392b;
+  --brand-soft: #f4e4e2;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --rule: #ddd;
+  --code-bg: #f7f7f7;
+  --max-w: 800px;
+}
+
+html, body { background: #ffffff; }
+body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+  color: var(--fg);
+  font-size: 15px;
+  line-height: 1.75;
+  margin: 0;
+  padding: 40px 32px;
+}
+
+.markdown-body { max-width: var(--max-w); margin: 0 auto; }
+
+.markdown-body h1 {
+  font-size: 1.9em;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 0.8em;
+  padding: 0.5em 0;
+  border-bottom: 3px solid var(--brand);
+  color: var(--brand);
+}
+.markdown-body h2 {
+  font-size: 1.4em;
+  font-weight: 700;
+  margin: 1.6em 0 0.6em;
+  padding-left: 0.6em;
+  border-left: 4px solid var(--brand);
+  color: var(--fg);
+}
+.markdown-body h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 1.2em 0 0.4em;
+  color: var(--brand);
+}
+.markdown-body h4 {
+  font-size: 1em;
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  color: var(--muted);
+}
+
+.markdown-body p { margin: 0.8em 0; text-align: justify; }
+.markdown-body a { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-body strong { color: var(--brand); font-weight: 700; }
+
+.markdown-body blockquote {
+  margin: 1.2em 0;
+  padding: 0.6em 1.2em;
+  border-left: 4px solid var(--brand);
+  background: var(--brand-soft);
+  color: #4a3838;
+}
+
+.markdown-body ul, .markdown-body ol { padding-left: 1.6em; margin: 0.8em 0; }
+.markdown-body hr { border: none; border-top: 1px solid var(--rule); margin: 1.8em 0; }
+
+.markdown-body code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--code-bg);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  color: var(--brand);
+}
+.markdown-body pre {
+  background: var(--code-bg);
+  padding: 1em 1.2em;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88em;
+  line-height: 1.6;
+  border-left: 3px solid var(--brand);
+}
+.markdown-body pre code { background: transparent; color: inherit; padding: 0; }
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 0.95em;
+}
+.markdown-body table th, .markdown-body table td {
+  border: 1px solid var(--rule);
+  padding: 0.5em 0.8em;
+}
+.markdown-body table th {
+  background: var(--brand);
+  color: #ffffff;
+  font-weight: 700;
+}
+.markdown-body table tr:nth-child(2n) { background: #fafafa; }
+
+.markdown-body img { max-width: 100%; height: auto; display: block; margin: 1.2em auto; }
+
+.mermaid { text-align: center; margin: 1.2em 0; }
+
+/* 打印模式下显示页眉页脚(品牌化加分项) */
+@media print {
+  @page {
+    margin: 18mm 18mm 22mm;
+    @top-center {
+      content: "青岛火一五信息科技有限公司 · 打破信息孤岛 · 全场景AI机器人";
+      font-family: "PingFang SC", sans-serif;
+      font-size: 9pt;
+      color: #999;
+    }
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font-family: "PingFang SC", sans-serif;
+      font-size: 9pt;
+      color: #999;
+    }
+    @bottom-right {
+      content: "huo15.com";
+      font-family: "PingFang SC", sans-serif;
+      font-size: 9pt;
+      color: var(--brand);
+    }
+  }
+}
