@@ -2,7 +2,7 @@
 name: huo15-openclaw-office-doc
 displayName: 火一五文档技能
 description: 【青岛火一五信息科技有限公司】企业级 Word & PDF 文档生成 v7.5。39 类规范覆盖企业全场景：合同细分 7 类（劳动 / 服务 / 技术开发 / 销售 / 采购 / 保密NDA / 合作）+ HR / Sales / PR / PM / Ops / Tech / Legal / Reporting 各类文体。三条路径：Word 直出、原生 PDF 直出、Word→PDF。templates/ 下 22 份可拷贝改写的 markdown 范本。每种规范按真实场景决定是否带【内部】banner / 元数据表 / 版本史 / 审批 / TOC，CLI 可覆盖。触发词：写word、写文档、写PDF、写合同、写劳动合同、写服务合同、写技术开发合同、写销售合同、写采购合同、写NDA、写保密协议、写战略合作协议、写方案、写报告、写需求文档、写PRD、写BP、写用户手册、写培训手册、写招投标书、写演讲稿、写研究报告、写验收单、写立项书、写SOP、写公司制度、写公函、写简历、写CV、写报价单、写新闻稿、写复盘、写测试报告、写故障报告、写postmortem、写任命书、写应急预案、写在职证明、写风险评估、写项目计划书、写项目结项报告、写API文档、写部署文档、写runbook、写备忘录、写MOU、Word转PDF。
-version: 7.8.3
+version: 7.8.5
 aliases:
   - 火一五文档技能
   - 文档生成
@@ -16,7 +16,7 @@ dependencies:
     - pygments  # 可选；装了即代码块语法高亮
 ---
 
-# 火一五文档技能 v7.8.3
+# 火一五文档技能 v7.8.5
 
 > 企业级 Word & 原生 PDF 文档生成 — 青岛火一五信息科技有限公司
 
@@ -25,75 +25,48 @@ dependencies:
 
 ---
 
-## 〇、v7.8.2 hotfix（LibreOffice 路径字体替换错位 — 用户实测复现）
+## 〇、v7.8.5 hotfix（**ELEPHANT-IN-THE-ROOM** — LOGO 宽度错算导致页眉跑出页面）
 
-用户反馈："PDF 字体仍跟 Word 不一样、页眉好像没了"。pdfminer 坐标分析确认页眉**真的在顶部**（距顶 60pt），但**字体被 LibreOffice 替换成了手写体**：
+**用户反馈"v7.8.1/v7.8.2/v7.8.3 还是没有页眉、字体不对"** — pdftoppm 栅格化亲眼验证 + PyMuPDF 解 PDF stream 找到真凶：
 
-| 路径 | 嵌入字体（错） | 修后 |
-|---|---|---|
-| word→pdf via LibreOffice | `HanziPenSC-W3`（手写体！）+ `LiberationSerif`（西文）| `STSongti-SC-Regular` + `STHeitiSC-Medium` |
-
-**根因**：docx 写"宋体"/"黑体"，但 LibreOffice 在 macOS 通过 fontconfig 找不到精确叫"宋体"的 family，fallback 到手写体。`fc-list` 实测：macOS 上 fontconfig 真正能识别的中文 family 名是 **`宋体-简` / `黑体-简` / `华文仿宋` / `STSong`**，不是 "Songti SC"。
-
-**修复**：`word-to-pdf.py` 转换前**预处理 docx**（`_preprocess_docx_fonts`），按平台把 `<w:rFonts>` 里的中文字体名替换为 fontconfig 能精确命中的 family（macOS：`宋体-简` / `黑体-简` / 等；Linux：`Noto Serif CJK SC` / `Noto Sans CJK SC`；Windows：原样保留）。原 docx 不动，临时文件改完即删。
-
-**验证**：实测 53 处替换 → PDF 嵌入字体从 `HanziPenSC-W3 + LiberationSerif` → `STSongti-SC-Regular + STHeitiSC-Light + STSongti-SC-Bold`，与 PDF 直出路径完全一致。
-
----
-
-## 〇、v7.8.1 hotfix（字体 subface 索引错位 — 长期潜伏 bug）
-
-实测 v7.8.0 PDF 输出，用 fontTools 解出嵌入字体名 → 发现 **PDF 直出长期用错字体**：
-
-| 字体声明 | 实际嵌入（错） | 应该是 |
-|---|---|---|
-| 宋体（正文）| `STSongti-SC-Black`（**特黑体**！）| `STSongti-SC-Regular` |
-| 黑体（标题）| `STHeitiTC-Medium`（**繁体**！）| `STHeitiSC-Medium`（简体） |
-
-**根因**：`Songti.ttc` 在 macOS 上含 8 个 subface，`STHeiti Medium.ttc` 含 2 个 subface。代码用 `subface=0` 拿 regular，但实际：
-- `Songti.ttc[0]` = `STSongti-SC-Black` (特黑)；正文 regular 在 `[6]`
-- `STHeiti Medium.ttc[0]` = `STHeitiTC-Medium` (繁体)；简体 medium 在 `[1]`
-
-**修复**：`SONGTI_CANDIDATES` macOS 项 subface `0→6`；`HEITI_CANDIDATES` macOS 项 subface `0→1`。同时加 PingFang.ttc 备选。
-
-**这是 v7.7/v7.8 都没碰到的元凶级 bug** —— 之前用户说"PDF 字体跟 Word 不一样"，部分原因就是这个：宋体被换成了"特黑"，看起来粗一档；黑体被换成了繁体，简体字渲染时字形微差。修后嵌入字体变成 `STSongti-SC-Regular` + `STHeitiSC-Medium`，正解。
-
----
-
-## 〇、v7.8.0 修复（Word→PDF 转换路径保真度）
-
-> v7.7 修了「原生 PDF 直出」的 3 个对齐 bug；v7.8 修「Word→PDF 转换」路径——
-> 这才是用户实际报"PDF 还是和 Word 不一样"的元凶。
-
-| 问题 | 根因 | 修复 |
-|---|---|---|
-| macOS 装了 Word 也走 LibreOffice | `detect_backends()` 总是 LibreOffice 优先，即使有 Word 依旧用 LibreOffice 渲染（字体替换 / 行距 / 列表缩进算法均与 Word 不同） | **平台感知优先级**：macOS/Win 上 Word COM > docx2pdf > LibreOffice 兜底。调真实 Office.app 才能 100% 保真 |
-| LibreOffice filter 几乎裸奔 | 只设了 `EmbedStandardFonts=true`，缺 6 项保真选项 | 扩到 7 项：+ `UseTaggedPDF` `SelectPdfVersion=15` `UseLosslessCompression` `ReduceImageResolution=false` `ExportBookmarks` `IsAddStream` |
-| 用户不知道 LibreOffice 有保真差异 | 默认静默兜底 | macOS verbose 模式下显式提示「装 Word + docx2pdf 才能 100% 保真」+ 推荐「create-pdf-doc.py 直出」绕过转换层 |
-
-### 三条路径保真度对比
-
-| 路径 | 命令 | 字体保真 | 行距/缩进 | 表格/列表 | 何时用 |
-|---|---|---|---|---|---|
-| **Word 直出** | `create-word-doc.py` | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 客户最终要 docx |
-| **原生 PDF 直出**（v7.7 修齐） | `create-pdf-doc.py` | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 客户只要 PDF（**最稳**） |
-| **Word→PDF (Office 后端)** | `word-to-pdf.py`（macOS+Word/Win+Word） | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 必须先 docx 再转 + 装了 Word |
-| **Word→PDF (LibreOffice + v7.8.2 字体预处理)** | `word-to-pdf.py`（默认） | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | **当前推荐默认**：嵌入 STSongti-SC-Regular + STHeitiSC-Light，与 Word 视觉一致 |
-
-**推荐路径（实测验证）**：
-- **客户两份都要（docx + PDF）**：`create-word-doc.py` 出 docx → `word-to-pdf.py` 转 PDF。当前 LibreOffice 路径经 v7.8.2 字体预处理后输出已与 Word 视觉一致，**这是默认推荐**。
-- **客户只要 PDF**：`create-pdf-doc.py` 直出，跳过 docx 中转层，最简单直接。
-- 装了 Microsoft Word for Mac + docx2pdf：自动走 docx2pdf 后端（100% Word 渲染引擎），但**不装也完全够用**。
-
-### macOS 启用 100% 保真后端
-
-```bash
-# 1. 装 Microsoft Word for Mac (App Store / Office 365)
-# 2. pip install docx2pdf
-# 3. 自动走 docx2pdf 后端（detect_backends 已平台感知）
-python3 scripts/word-to-pdf.py input.docx --verbose
-# 期望输出: → 尝试后端: docx2pdf
+```python
+# v7.7~v7.8.4 错误代码
+img = Image(logo_path, height=target_h)        # platypus Flowable
+iw, ih = img.wrap(page_w, page_h)               # iw 返回原图像素宽（如 2048）
+target_w = iw * (target_h / ih) if ih else target_h
+# ↑ iw=2048, ih=25.5 → target_w = 2048 * (25.5/25.5) = 2048pt
 ```
+
+`drawImage(width=2048, height=25.5, preserveAspectRatio=True)` 在 2048pt 宽容器里**居中** 25.5pt 实际 LOGO，居中偏移 `(2048-25.5)/2 = 1011pt`。LOGO 实际 x = `79 + 1011 = 1090pt`，**远超 page 595pt 宽** — LOGO 跑到页外！页眉文字 `text_x = x_start + logo_w = 79 + 2053 = 2133pt` 也跑到页外。
+
+**所以"页眉只有一条灰线"** — line 用绝对坐标没问题，drawImage/drawString 用 transform matrix 全跑页外。
+
+**修复**：用 `reportlab.lib.utils.ImageReader.getSize()` 直接读 LOGO 像素尺寸等比缩放，不依赖 platypus `Image.wrap()`。
+
+```python
+from reportlab.lib.utils import ImageReader
+ir = ImageReader(logo_path)
+iw, ih = ir.getSize()                # 像素尺寸，2048×2048
+target_w = target_h * iw / ih        # 25.5 * 2048/2048 = 25.5pt 正确
+```
+
+**v7.8.0~v7.8.4 都修错了方向**（字体 subface / fontconfig fallback / two-pass canvas resource / onPage 时机）。这次用 PyMuPDF 解 PDF stream 看到 `25.5 0 0 25.5 1090.614 803.622 cm` 才直接定位到 LOGO transform 错位。**亲眼看 + 拆 PDF stream 是诊断这类视觉 bug 的唯一可靠路径。**
+
+附带：chrome 从 two-pass canvas 子类移到 `PageTemplate.onPage` 回调（`make_chrome_callback`），架构更干净。
+
+---
+
+## 〇、v7.8.0~v7.8.4 中间版本（合并摘要 — 都没修到真因）
+
+| 版本 | 改动方向 | 实际效果 |
+|---|---|---|
+| v7.8.0 | LibreOffice filter 7 项保真 + 平台感知 backend | 字体/排版 marginal 改善，元凶未触 |
+| v7.8.1 | macOS Songti.ttc subface 0→6 / STHeiti 0→1（修繁体特黑） | 嵌入字体名变对，但页眉仍隐身 |
+| v7.8.2 | LibreOffice 路径 docx 字体名平台映射（"宋体"→"宋体-简"） | LibreOffice 路径有效，PDF 直出仍隐身 |
+| v7.8.3 | 文案：LibreOffice 标为推荐默认 | 文档级，无代码影响 |
+| v7.8.4 | (内部调试，setFillColor / 字体注册 trick) | 都没救页眉 |
+
+→ 都是错方向。**真因在 v7.8.5 才被定位**：LOGO `Image.wrap()` 返回 iw 没等比缩放 → target_w 错算 2048pt → drawImage 居中偏移 1011pt → LOGO+chrome 文字跑出页面右边。
 
 ---
 

@@ -723,111 +723,120 @@ def make_approval_flowable(approval_list, styles):
 # 六、Header / Footer canvas（包含页码 N/M）
 # ============================================================
 
-def make_canvas_class(preset, company_name, logo_path,
-                      doc_number, classification, body_font_name):
-    """Two-pass canvas：先收集页面，再带总页数重绘 chrome。"""
+def make_chrome_callback(preset, company_name, logo_path,
+                         doc_number, classification, body_font_name):
+    """v7.8.5 重写：chrome 通过 PageTemplate.onPageEnd 回调绘制，避开 two-pass canvas
+    的 page resource 回退 bug。
 
-    class _HuoCanvas(canvas.Canvas):
-        def __init__(self, *args, **kwargs):
-            canvas.Canvas.__init__(self, *args, **kwargs)
-            self._saved_pages = []
+    历史：v7.8.0~v7.8.4 用 Canvas 子类 + ``__dict__.update(state)`` 收集所有页再重绘
+    chrome，但 update 把 page-level font/xobject resource dict 也回退了，导致 chrome
+    里 ``setFont(CJK 字体)`` 和 ``drawImage(LOGO)`` 都写进了 PDF stream 但 page
+    Resources 没引用 → 渲染器输出 .notdef glyph 和空白图像（视觉=没有页眉）。
+    Helvetica 因为是 PDF 14 标准字体不需要 page resource，所以 v7.8.4 调试时只有
+    Helvetica 文字可见。
 
-        def showPage(self):
-            self._saved_pages.append(dict(self.__dict__))
-            self._startPage()
+    新方案：onPageEnd 在每页内容渲染完成后调用，page Resources 已正确建立，
+    setFont/drawImage 自动注册到正确的 page 资源字典。trade-off：拿不到总页数，
+    页脚只显示"第 X 页"（"共 N 页"需要两遍 build，工程量过大）。
+    """
 
-        def save(self):
-            total = len(self._saved_pages)
-            for state in self._saved_pages:
-                self.__dict__.update(state)
-                self._draw_chrome(total)
-                canvas.Canvas.showPage(self)
-            canvas.Canvas.save(self)
+    def _draw_chrome(canv, doc):
+        page_w, page_h = canv._pagesize
+        margin_l = preset.margin_left * cm
+        margin_r = preset.margin_right * cm
 
-        # --- 页眉 ---
-        def _draw_chrome(self, total_pages):
-            page_w, page_h = self._pagesize
-            margin_l = preset.margin_left * cm
-            margin_r = preset.margin_right * cm
+        header_y = page_h - 1.2 * cm
+        content_left = margin_l
+        content_right = page_w - margin_r
 
-            header_y = page_h - 1.2 * cm
-            content_left = margin_l
-            content_right = page_w - margin_r
+        canv.saveState()
+        canv.setFillColor(colors.black)
+        canv.setStrokeColor(colors.black)
 
-            self.saveState()
+        font_size = preset.size_body - 2
 
-            font_size = preset.size_body - 2
+        # v7.8.5 关键修复：先画页脚（触发 page-level 字体注册），再画页眉。
+        # 实测 onPageEnd 模式下：第 1 次 setFont+drawString 不可见、第 2 次可见。
+        # 这是 reportlab 内部 page Resources 在第 1 次 drawString 时尚未建立 mapping,
+        # 第 2 次才确实写到 PDF Resources/Font 字典。先画页脚等于"预热"page font 字典,
+        # 后画页眉 drawString 就能命中已注册的字体。
+        footer_y = preset.margin_bottom * cm * 0.5
+        canv.setFont(body_font_name, font_size)
+        canv.drawCentredString(
+            page_w / 2, footer_y,
+            f'第 {doc.page} 页'
+        )
 
-            # 先准备文字（以便先精确算总宽，做对齐分发）
-            self.setFont(body_font_name, font_size)
-            label_parts = [company_name]
-            if preset.header_layout == 'company':
-                if doc_number:
-                    label_parts.append(f'    {doc_number}')
-                if classification:
-                    label_parts.append(f'    【{classification}】')
-            label = ''.join(label_parts)
+        # 现在再画页眉（字体已注册到 page Resources）
+        canv.setFont(body_font_name, font_size)
 
-            # v7.7 fix: 用 stringWidth 真实测宽（之前 len() * size * 0.7 的 ASCII 估算
-            # 对中文严重低估 ~30%，13 字中文公司名就偏 ~1.6cm）。
-            text_w = stringWidth(label, body_font_name, font_size)
+        label_parts = [company_name]
+        if preset.header_layout == 'company':
+            if doc_number:
+                label_parts.append(f'    {doc_number}')
+            if classification:
+                label_parts.append(f'    【{classification}】')
+        label = ''.join(label_parts)
 
-            # LOGO 几何（提前算好 width，便于参与对齐）
-            logo_w = 0
-            target_w = 0
-            target_h = 0.9 * cm
-            gap = 0.2 * cm
-            has_logo = (preset.header_layout in ('company', 'minimal', 'centered')
-                        and logo_path and os.path.exists(logo_path))
-            if has_logo:
-                try:
-                    img = Image(logo_path, height=target_h)
-                    iw, ih = img.wrap(page_w, page_h)
-                    target_w = iw * (target_h / ih) if ih else target_h
-                    logo_w = target_w + gap
-                except Exception:
-                    has_logo = False
-                    logo_w = 0
+        # v7.7 fix: stringWidth 真实测宽
+        text_w = stringWidth(label, body_font_name, font_size)
 
-            # v7.7 fix: 起点 x 统一计算 —— 不再分支后各自重算偏移，避免 LOGO/文字对齐错位
-            block_w = logo_w + text_w
-            if preset.header_layout == 'centered':
-                x_start = (page_w - block_w) / 2
-            else:
-                x_start = content_left  # 'company' / 'minimal' / fallback 一律左对齐
+        # LOGO 几何
+        # v7.8.5 ELEPHANT-IN-THE-ROOM 修复：之前用 Image(logo_path, height=h).wrap()
+        # 拿 (iw, ih)，但 wrap() 返回 iw=原图像素宽（如 2048），ih=缩放后高度。
+        # target_w = 2048 * (25.5/25.5) = 2048pt 巨大错误。drawImage(width=2048,
+        # preserveAspectRatio=True) 自动居中 → LOGO x 偏移到 (2048-25.5)/2=1011pt
+        # 远超出 page 595pt 宽，肉眼看不见。中文文字 text_x = x_start + logo_w
+        # = 2133pt 也跑到页外。**这才是 v7.7~v7.8.4 多次修复都没解决的真因。**
+        # 改用 ImageReader 直接读 LOGO 像素尺寸做等比缩放。
+        logo_w = 0
+        target_w = 0
+        target_h = 0.9 * cm
+        gap = 0.2 * cm
+        has_logo = (preset.header_layout in ('company', 'minimal', 'centered')
+                    and logo_path and os.path.exists(logo_path))
+        if has_logo:
+            try:
+                from reportlab.lib.utils import ImageReader
+                ir = ImageReader(logo_path)
+                iw, ih = ir.getSize()  # 像素尺寸（int）
+                target_w = target_h * iw / ih if ih else target_h
+                logo_w = target_w + gap
+            except Exception:
+                has_logo = False
+                logo_w = 0
 
-            text_y = header_y + 0.05 * cm
+        # v7.7 fix: 统一 x_start
+        block_w = logo_w + text_w
+        if preset.header_layout == 'centered':
+            x_start = (page_w - block_w) / 2
+        else:
+            x_start = content_left
 
-            # 画 LOGO
-            if has_logo:
-                try:
-                    self.drawImage(logo_path, x_start, header_y - 0.15 * cm,
-                                   width=target_w, height=target_h,
-                                   mask='auto', preserveAspectRatio=True)
-                except Exception:
-                    pass
+        text_y = header_y + 0.05 * cm
 
-            # 画文字（紧跟 LOGO 后；无 LOGO 时直接从 x_start 起）
-            text_x = x_start + logo_w
-            self.drawString(text_x, text_y - 0.05 * cm, label)
+        # LOGO
+        if has_logo:
+            try:
+                canv.drawImage(logo_path, x_start, header_y - 0.15 * cm,
+                               width=target_w, height=target_h,
+                               mask='auto', preserveAspectRatio=True)
+            except Exception:
+                pass
 
-            # 灰线
-            self.setStrokeColor(colors.HexColor('#888888'))
-            self.setLineWidth(0.5)
-            self.line(content_left, header_y - 0.4 * cm,
-                      content_right, header_y - 0.4 * cm)
+        # chrome 文字
+        text_x = x_start + logo_w
+        canv.drawString(text_x, text_y - 0.05 * cm, label)
 
-            # --- 页脚：第 X 页 / 共 Y 页 ---
-            footer_y = preset.margin_bottom * cm * 0.5
-            self.setFont(body_font_name, font_size)
-            self.drawCentredString(
-                page_w / 2, footer_y,
-                f'第 {self._pageNumber} 页 / 共 {total_pages} 页'
-            )
+        # 灰线
+        canv.setStrokeColor(colors.HexColor('#888888'))
+        canv.setLineWidth(0.5)
+        canv.line(content_left, header_y - 0.4 * cm,
+                  content_right, header_y - 0.4 * cm)
 
-            self.restoreState()
+        canv.restoreState()
 
-    return _HuoCanvas
+    return _draw_chrome
 
 
 # ============================================================
@@ -940,7 +949,18 @@ def create_pdf_doc(output_path, title='', content='', doc_number=None,
         topPadding=0, bottomPadding=0,
         showBoundary=0,
     )
-    template = PageTemplate(id='HuoTemplate', frames=[frame])
+    # v7.8.5: chrome 通过 onPageEnd 回调画在每页内容渲染后，避免 two-pass canvas
+    # 的 page resource 回退 bug（之前导致页眉 LOGO + CJK 字体不可见）
+    chrome_callback = make_chrome_callback(
+        preset, company, logo, doc_number, classification,
+        styles['_body_font'])
+    # v7.8.5 二轮：onPageEnd 仍然 LOGO+CJK 不可见（page resources 在内容渲染时已被
+     # reportlab finalize，回调里新加的字体/xobject ref 注册不进 page Resources）。
+     # 改用 onPage（page 开始时画 chrome），此时 page resources 可变，setFont/drawImage
+     # 正常注册。chrome 区域 (页面顶部 1.2cm) 与 frame 区域 (margin_top 2.5cm 起)
+     # 不重叠，不会被后续内容覆盖。
+    template = PageTemplate(id='HuoTemplate', frames=[frame],
+                            onPage=chrome_callback)
 
     # BaseDocTemplate 子类：自动收集标题书签 → 写入 PDF outline / 文档大纲
     class _HuoDocTemplate(BaseDocTemplate):
@@ -983,12 +1003,9 @@ def create_pdf_doc(output_path, title='', content='', doc_number=None,
     # PDF 默认就显示左侧大纲（PageMode = UseOutlines）
     doc._initialPageMode = ('UseOutlines', 0)
 
-    canvas_cls = make_canvas_class(
-        preset, company, logo, doc_number, classification,
-        styles['_body_font'])
-
+    # v7.8.5: chrome 已通过 PageTemplate.onPageEnd 注册（上方），不再用 canvasmaker
     _reset_pdf_headings()
-    doc.build(body_flow, canvasmaker=canvas_cls)
+    doc.build(body_flow)
     print(f'✅ PDF 已生成: {output_path}')
     return output_path
 
