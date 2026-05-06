@@ -2,7 +2,7 @@
 name: huo15-openclaw-ppt
 displayName: 火一五演示稿技能
 description: 基于 design tokens 的 PPT 生成技能。内置 21 套生产级审美方案（Apple 发布会 / Apple.com / Apple macOS 26 Liquid Glass 玻璃 / 原研哉极简 / 中国水墨 / 国风故宫 / 赛博朋克绚彩 / 梵高油画 / 达芬奇手稿 / 小红书时尚奶油胶片 / 莫兰迪高级灰 / 孟菲斯 80s / 包豪斯 / 韦斯安德森 / 科技霓虹 / Vercel/Linear 极简）+ 11 个语义化页面模板。自动 fit 防 CJK 溢出，玻璃风自带七彩光球+磨砂卡，水墨/国风自带朱砂方印+万字纹边框+飞白笔触，科技风自带渐变背景+网格+glow halo+四角刻度。单张 slide 即可当品牌海报。触发词：做PPT、生成PPT、PPT、Apple发布会、苹果玻璃风、liquid glass、原研哉、水墨、国风、赛博朋克、梵高、达芬奇、莫兰迪、孟菲斯、包豪斯、韦斯安德森、小红书时尚、复古胶片、Vercel风。
-version: 3.7.0
+version: 3.8.0
 aliases:
   - 火一五PPT技能
   - 火一五演示稿技能
@@ -140,6 +140,28 @@ python3 scripts/brand_init.py --logo company-logo.png \
 **实测火一五 logo**：自动抽到 `#E02000`（火焰红橙），与 logo 视觉一致。
 
 **集成 brand-protocol v1.0 5 步**：本工具完成「Codify」步，前 4 步 Ask/Search/Download/Verify 由 huo15-openclaw-brand-protocol 引导。
+
+---
+
+## 〇、v3.8 Web 导出 + URL 导入（媲美 Gamma publish/import）
+
+### web_export.py — JSON deck → HTML（scroll-snap 浏览体验）
+
+```bash
+python3 scripts/web_export.py /path/deck.json --pack apple-light --output ./present.html
+open ./present.html  # 浏览器全屏 + 鼠标滚轮逐页 snap
+```
+
+CSS variables 注入 pack 配色 + 中文字体 fallback + 响应式（移动端竖向滑）。**反 AI Slop 默认字体 IBM Plex Sans 而非 Inter。**
+
+### url_import.py — URL → JSON deck
+
+```bash
+python3 scripts/url_import.py https://example.com/article \
+    --output /tmp/d.json --build /tmp/d.pptx --pack apple-light
+```
+
+工作流：urllib 抓 HTML → 抽 h1-h3+p+li → 截断 30K 字符 → Claude API 转 deck。`--print-extracted` 不调 LLM 验证抓取。
 
 ---
 
