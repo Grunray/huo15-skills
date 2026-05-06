@@ -98,14 +98,17 @@ def build(prs, pack, data: dict) -> None:
         if runs:
             apply_text_gradient(runs[0], dec.accent_gradient[0], dec.accent_gradient[1], angle_deg=0)
 
-    # Subtitle
+    # Subtitle（fit 自适应防溢出 — v5.0.1 修长副标题溢出）
     subtitle = data.get('subtitle', '')
     if subtitle:
         sub_top = hero_top + (hero_size / 72.0) * 1.3  # 在 hero 下方
+        sub_w = W - 2 * sp.margin_x_hero
+        sub_size = fit_font_size(subtitle, sub_w, t.page_title,
+                                 min_size_pt=18, max_lines=2)
         add_text(slide, pack, subtitle,
                  left=sp.margin_x_hero, top=sub_top,
-                 width=W - 2 * sp.margin_x_hero, height=0.8,
-                 font_size=t.page_title, weight='regular',
+                 width=sub_w, height=0.8,
+                 font_size=sub_size, weight='regular',
                  color_key='text_secondary',
                  align=dec.cover_hero_align,
                  tracking=t.page_tracking)

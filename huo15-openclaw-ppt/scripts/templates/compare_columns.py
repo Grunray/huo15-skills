@@ -83,8 +83,8 @@ def build(prs, pack, data: dict) -> None:
                       thickness=0.02)
             y += 0.15
 
-        # 条目列表
-        items = col_data.get('items', [])
+        # 条目列表（兼容 items / points 两种 schema 命名）
+        items = col_data.get('items') or col_data.get('points') or []
         for it in items:
             s = it if isinstance(it, str) else it.get('label', str(it))
             add_text(slide, pack, '·  ' + s,
