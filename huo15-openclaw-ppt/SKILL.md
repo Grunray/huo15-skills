@@ -2,7 +2,7 @@
 name: huo15-openclaw-ppt
 displayName: 火一五演示稿技能
 description: 基于 design tokens 的 PPT 生成技能。内置 21 套生产级审美方案（Apple 发布会 / Apple.com / Apple macOS 26 Liquid Glass 玻璃 / 原研哉极简 / 中国水墨 / 国风故宫 / 赛博朋克绚彩 / 梵高油画 / 达芬奇手稿 / 小红书时尚奶油胶片 / 莫兰迪高级灰 / 孟菲斯 80s / 包豪斯 / 韦斯安德森 / 科技霓虹 / Vercel/Linear 极简）+ 11 个语义化页面模板。自动 fit 防 CJK 溢出，玻璃风自带七彩光球+磨砂卡，水墨/国风自带朱砂方印+万字纹边框+飞白笔触，科技风自带渐变背景+网格+glow halo+四角刻度。单张 slide 即可当品牌海报。触发词：做PPT、生成PPT、PPT、Apple发布会、苹果玻璃风、liquid glass、原研哉、水墨、国风、赛博朋克、梵高、达芬奇、莫兰迪、孟菲斯、包豪斯、韦斯安德森、小红书时尚、复古胶片、Vercel风。
-version: 3.6.0
+version: 3.7.0
 aliases:
   - 火一五PPT技能
   - 火一五演示稿技能
@@ -120,6 +120,26 @@ python3 scripts/ai_image.py "..." --count 4 --output-dir ./images/
 ```
 
 媒体库 cache `~/.huo15/ppt-media/<hash>.jpg` 同 prompt 不重复请求。失败时生成"[ 占 位 图 ] PLACEHOLDER"标注图（反 AI Slop R5：宁可占位也不画 CSS 假产品图）。环境变量：`UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY`。
+
+---
+
+## 〇、v3.7 品牌 Theme 系统（媲美 Gamma 一键 brand 注入）
+
+`scripts/brand_init.py` — 从 logo 自动提取主色调 + 字体推荐 → 生成 brand-pack.json + brand-spec.md。
+
+```bash
+python3 scripts/brand_init.py --logo company-logo.png \
+    --base-pack apple-light \
+    --company "青岛火一五信息科技有限公司" \
+    --output-pack ./brand.json \
+    --output-spec ./brand-spec.md
+```
+
+**主色提取算法**（纯 PIL）：缩放 200×200 → 量化 32 级 → 排除白/黑/灰（HSL S<0.15 或 V>95%）→ 按饱和度 60% + 面积 40% 加权选 primary。
+
+**实测火一五 logo**：自动抽到 `#E02000`（火焰红橙），与 logo 视觉一致。
+
+**集成 brand-protocol v1.0 5 步**：本工具完成「Codify」步，前 4 步 Ask/Search/Download/Verify 由 huo15-openclaw-brand-protocol 引导。
 
 ---
 
