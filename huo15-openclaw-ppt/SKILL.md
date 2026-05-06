@@ -2,7 +2,7 @@
 name: huo15-openclaw-ppt
 displayName: 火一五演示稿技能
 description: 基于 design tokens 的 PPT 生成技能。内置 21 套生产级审美方案（Apple 发布会 / Apple.com / Apple macOS 26 Liquid Glass 玻璃 / 原研哉极简 / 中国水墨 / 国风故宫 / 赛博朋克绚彩 / 梵高油画 / 达芬奇手稿 / 小红书时尚奶油胶片 / 莫兰迪高级灰 / 孟菲斯 80s / 包豪斯 / 韦斯安德森 / 科技霓虹 / Vercel/Linear 极简）+ 11 个语义化页面模板。自动 fit 防 CJK 溢出，玻璃风自带七彩光球+磨砂卡，水墨/国风自带朱砂方印+万字纹边框+飞白笔触，科技风自带渐变背景+网格+glow halo+四角刻度。单张 slide 即可当品牌海报。触发词：做PPT、生成PPT、PPT、Apple发布会、苹果玻璃风、liquid glass、原研哉、水墨、国风、赛博朋克、梵高、达芬奇、莫兰迪、孟菲斯、包豪斯、韦斯安德森、小红书时尚、复古胶片、Vercel风。
-version: 3.8.0
+version: 3.9.0
 aliases:
   - 火一五PPT技能
   - 火一五演示稿技能
@@ -162,6 +162,32 @@ python3 scripts/url_import.py https://example.com/article \
 ```
 
 工作流：urllib 抓 HTML → 抽 h1-h3+p+li → 截断 30K 字符 → Claude API 转 deck。`--print-extracted` 不调 LLM 验证抓取。
+
+---
+
+## 〇、v3.9 Remix + 多语言（媲美 Gamma Remix）
+
+`scripts/remix.py` — 现有 deck → 改受众/语言/语气重写文案。
+
+```bash
+# 改受众（董事会 / 投资人 / 客户 / 团队 / 大众 / 内部）
+python3 scripts/remix.py /path/deck.json --audience board --output /tmp/board.json
+
+# 译英文 + 投资人语气
+python3 scripts/remix.py deck.json --lang en --audience investor \
+    --tone formal --output /tmp/en.json
+
+# 一条龙：remix + 出 PPTX
+python3 scripts/remix.py deck.json --audience client \
+    --output /tmp/d.json --build /tmp/d.pptx
+```
+
+3 维度：
+- `--audience` client / internal / board / investor / team / public
+- `--lang` zh / en / ja / es / fr / de / ko
+- `--tone` formal / casual / passionate / academic / conversational
+
+slides 结构 + type + 字段 key 不变，**只改文字 value**。
 
 ---
 
