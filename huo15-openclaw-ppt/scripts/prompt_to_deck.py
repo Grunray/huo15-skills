@@ -167,41 +167,24 @@ DEFAULT_MODELS = {
 
 
 def is_llm_enabled() -> tuple[bool, str]:
-    """检查 LLM 能不能调（参照 xhs llm_helper.py 模式）。
-    返回 (enabled, reason)。"""
+    """v5.0：通过 llm_provider 检查 6 个 provider 是否至少一个可用"""
     try:
-        import anthropic  # noqa
+        from llm_provider import is_enabled
     except ImportError:
-        return False, "缺 anthropic SDK：pip install anthropic"
-    if not os.environ.get('ANTHROPIC_API_KEY'):
-        return False, ("缺 ANTHROPIC_API_KEY 环境变量。\n"
-                       "设置方法：\n"
-                       "  export ANTHROPIC_API_KEY='sk-ant-...'\n"
-                       "  # 或写入 ~/.zshrc / ~/.bashrc\n"
-                       "如要 OpenClaw 内置 LLM，参考 huo15-openclaw-openai-knowledge-base/scripts/kb-llm.py")
-    return True, ''
+        return False, "缺 scripts/llm_provider.py"
+    return is_enabled()
 
 
 def call_claude(user_prompt: str, *,
                 pack_override: str | None = None,
                 slides: int | None = None,
                 model: str | None = None,
-                api_key: str | None = None) -> dict:
-    """调用 Claude API 生成 deck JSON。"""
-    try:
-        import anthropic
-    except ImportError:
-        raise RuntimeError(
-            "缺 anthropic SDK：pip install anthropic\n"
-            "（v3.4 AI prompt-to-deck 必须依赖）"
-        )
-
-    api_key = api_key or os.environ.get('ANTHROPIC_API_KEY')
-    if not api_key:
-        raise RuntimeError("缺 ANTHROPIC_API_KEY 环境变量")
-    model = model or os.environ.get('ANTHROPIC_MODEL') or DEFAULT_MODELS['balanced']
-
-    client = anthropic.Anthropic(api_key=api_key)
+                api_key: str | None = None,
+                provider: str | None = None) -> dict:
+    """v5.0：调用 LLM 生成 deck JSON。
+    向后兼容名 'call_claude'，但实际通过 llm_provider 支持 6 种 provider
+    （anthropic / openai / deepseek / qwen / doubao / openclaw）。"""
+    from llm_provider import call_llm  # 延迟 import 避免循环
 
     full_user = user_prompt
     if pack_override:
@@ -209,40 +192,27 @@ def call_claude(user_prompt: str, *,
     if slides:
         full_user += f"\n\n【强制 slides 数】: {slides}"
 
-    # Anthropic prompt caching：system prompt 标 cache_control，重复调用省 90% token
-    response = client.messages.create(
+    # api_key 是历史参数，新代码用 PPT_LLM_API_KEY / 各 provider 专用 env
+    if api_key:
+        os.environ.setdefault('ANTHROPIC_API_KEY', api_key)
+
+    result = call_llm(
+        system=SYSTEM_PROMPT,
+        user=full_user,
+        provider=provider,
         model=model,
         max_tokens=4096,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": full_user}],
+        cache=True,
     )
 
-    text = response.content[0].text.strip()
-    # 去掉可能的 ```json 包裹
+    text = result['text']
     if text.startswith('```'):
         text = text.split('```', 2)[1]
         if text.startswith('json'):
             text = text[4:]
         text = text.strip().rstrip('`').strip()
 
-    deck = json.loads(text)
-
-    # 缓存命中率信息（DEBUG 用）
-    usage = response.usage
-    print(f"  📊 token: input={usage.input_tokens} output={usage.output_tokens}",
-          file=sys.stderr)
-    if hasattr(usage, 'cache_read_input_tokens') and usage.cache_read_input_tokens:
-        saved = usage.cache_read_input_tokens
-        print(f"  💾 prompt cache 命中: {saved} tokens 走 cache（节省 90% 成本）",
-              file=sys.stderr)
-
-    return deck
+    return json.loads(text)
 
 
 # ============================================================

@@ -2,7 +2,7 @@
 name: huo15-openclaw-ppt
 displayName: 火一五演示稿技能
 description: 基于 design tokens 的 PPT 生成技能。内置 21 套生产级审美方案（Apple 发布会 / Apple.com / Apple macOS 26 Liquid Glass 玻璃 / 原研哉极简 / 中国水墨 / 国风故宫 / 赛博朋克绚彩 / 梵高油画 / 达芬奇手稿 / 小红书时尚奶油胶片 / 莫兰迪高级灰 / 孟菲斯 80s / 包豪斯 / 韦斯安德森 / 科技霓虹 / Vercel/Linear 极简）+ 11 个语义化页面模板。自动 fit 防 CJK 溢出，玻璃风自带七彩光球+磨砂卡，水墨/国风自带朱砂方印+万字纹边框+飞白笔触，科技风自带渐变背景+网格+glow halo+四角刻度。单张 slide 即可当品牌海报。触发词：做PPT、生成PPT、PPT、Apple发布会、苹果玻璃风、liquid glass、原研哉、水墨、国风、赛博朋克、梵高、达芬奇、莫兰迪、孟菲斯、包豪斯、韦斯安德森、小红书时尚、复古胶片、Vercel风。
-version: 4.5.0
+version: 5.0.0
 aliases:
   - 火一五PPT技能
   - 火一五演示稿技能
@@ -192,38 +192,74 @@ python3 scripts/pdf_import.py whitepaper.pdf --output /tmp/d.json
 
 ---
 
-## 〇、v4.5 长图 + 视频导出（对标 ChatPPT）
+## 〇、v5.0 完整能力矩阵（v3.3 → v5.0 累加，对标 Gamma + ChatPPT）
 
-### `image_export.py` — deck → 长图（公众号 / 朋友圈 / 小红书）
+### 18 个 CLI 脚本 — 媲美 Gamma + ChatPPT + 独有差异化
+
+| 类别 | 脚本 | 能力 | 对标 |
+|---|---|---|---|
+| **🆕 v5.0 LLM provider** | `llm_provider.py` | 6 backend 抽象（anthropic/openai/deepseek/qwen/doubao/openclaw） | 国内合规 |
+| **生成入口** | `prompt_to_deck.py` | 自然语言 → JSON deck（cache 90% token 省） | Gamma |
+| | `url_import.py` | URL → deck | Gamma |
+| | `docx_import.py` | Word → deck | ChatPPT |
+| | `xmind_import.py` | XMind → deck（新老格式都支持） | ChatPPT |
+| | `pdf_import.py` | PDF → deck（PyMuPDF 优先 / pypdf fallback） | ChatPPT |
+| **设计 + 视觉** | `smart_layouts.py` | timeline / pyramid / funnel / steps 4 种 | Gamma Smart Layouts |
+| | `ai_image.py` | Unsplash / Pexels / Placeholder 3 provider | Gamma Imagine |
+| | `charts.py` | matplotlib bar/line/pie/area 真数据图 | Gamma |
+| | `brand_init.py` | logo → 主色 → brand-pack.json | Gamma brand kit |
+| **改写工具** | `remix.py` | 6 audiences × 7 langs × 5 tones | Gamma Remix |
+| | `slide_polish.py` | 10 模式 polish（refine/shorten/add-data/...） | ChatPPT 文本辅写 |
+| | `pptx_edit.py` | 加载现有 pptx → AI 改写 → 输出（保留 formatting） | ChatPPT Office 插件 |
+| | `speaker_notes.py` | 5 种语气演讲稿写入 .pptx notes 层 | ChatPPT 演讲稿 |
+| **效果增强** | `pptx_animate.py` | 4 种动画风格（OOXML transition 注入） | ChatPPT 动画引擎 |
+| **导出** | `web_export.py` | scroll-snap HTML 浏览体验 | Gamma publish |
+| | `image_export.py` | 长图 / 九宫格 / 横排走廊 | ChatPPT 公众号 |
+| | `video_export.py` | MP4 + BGM 淡出 | ChatPPT 视频号 |
+| **审计** | `anti_slop_audit.py` | 15 红线机器化校验 | **独有** |
+| | `wcag_audit.py` | WCAG 2.2 AA 对比度 | **独有** |
+| | `pptx_critique.py` `auto_critique.py` | 4 档审美档位 + 6 维评审 | **独有** |
+
+### 一键完整工作流
 
 ```bash
-# 公众号长图（垂直拼接）
-python3 scripts/image_export.py /tmp/d.pptx --output /tmp/longpic.jpg
+# Provider 任选其一（v5.0 支持 6 种）
+export PPT_LLM_PROVIDER=anthropic    # 或 openai / deepseek / qwen / doubao / openclaw
+export ANTHROPIC_API_KEY='sk-ant-...'  # 或对应 provider 的 env key
 
-# 朋友圈九宫格 / 2×2 网格
-python3 scripts/image_export.py d.pptx --layout grid-3x3 -o /tmp/grid.jpg
-python3 scripts/image_export.py d.pptx --layout grid-2x2 -o /tmp/grid2.jpg
+# 多源输入 → JSON
+python3 scripts/prompt_to_deck.py "做一份发布会演讲" -o /tmp/d.json
+# 或 docx_import / xmind_import / pdf_import / url_import
 
-# 横排走廊（LinkedIn 风）
-python3 scripts/image_export.py d.pptx --layout horizontal -o /tmp/walk.jpg
+# 改写优化 → JSON
+python3 scripts/slide_polish.py /tmp/d.json --mode shorten -o /tmp/d2.json
+python3 scripts/remix.py /tmp/d.json --audience board --lang en -o /tmp/board-en.json
+
+# 出 PPTX
+python3 scripts/create_pptx_combined.py --spec /tmp/d.json --pack apple-light -o /tmp/d.pptx
+
+# 加动画 + 演讲稿
+python3 scripts/pptx_animate.py /tmp/d.pptx --style apple-keynote -o /tmp/d-a.pptx
+python3 scripts/speaker_notes.py /tmp/d-a.pptx --tone passionate -o /tmp/d-final.pptx
+
+# 多形态导出
+python3 scripts/web_export.py /tmp/d.json -o /tmp/site.html
+python3 scripts/image_export.py /tmp/d-final.pptx --layout vertical -o /tmp/longpic.jpg
+python3 scripts/video_export.py /tmp/d-final.pptx --bgm m.mp3 -o /tmp/d.mp4
+
+# 自动评审
+python3 scripts/auto_critique.py --deck /tmp/d.json --mode full -o /tmp/critique/
 ```
 
-工作流：pptx → LibreOffice → PDF → pdftoppm → PIL 拼接。`--dpi` 80-200 控制清晰度。
+### 永远的独有护城河（vs Gamma + ChatPPT）
 
-### `video_export.py` — .pptx → MP4
-
-```bash
-# 默认 1080p，每 slide 4s
-python3 scripts/video_export.py /tmp/d.pptx --output /tmp/d.mp4
-
-# 加 BGM + 自动淡出
-python3 scripts/video_export.py d.pptx --bgm /path/music.mp3 \
-    --duration-per-slide 6 --output d.mp4
-```
-
-工作流：pptx → PDF → PNG（letterbox 统一分辨率）→ ffmpeg concat → MP4。BGM 循环+淡出 1s。**适合视频号 / 抖音 / 小红书的"PPT 改视频"场景**。
-
-实测：6 张 slide → 长图 1333×4500（221KB）/ 720p 视频 6.97s（74KB）✓
+- **本地运行 + 数据隐私**（合同/财报不上传 SaaS）
+- **CJK 一等公民**（朱砂印章 / 飞白 / 国风 / 中文字体 fallback）
+- **21 套真审美方案**（玻璃 / 水墨 / 国风 / 梵高 / 包豪斯 / 韦斯安德森）
+- **15 条反 AI Slop 红线机器化** + WCAG 2.2 AA 自检
+- **6 维 4 档审美评审** + 自动 PNG 截图 + Markdown 报告
+- **6 LLM provider 灵活切换**（国内合规场景必备）
+- **零 vendor lock-in** — 输出 PPTX/HTML/MP4/JPG 永远是自己的
 
 ---
 
