@@ -25,7 +25,7 @@
 
 <div align="center">
 
-![Skills](https://img.shields.io/badge/skills-27-blue)
+![Skills](https://img.shields.io/badge/skills-29-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-compatible-orange)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-7c3aed)
@@ -76,7 +76,7 @@ huo15-skills/
 ├── SKILL.md                    # 仓库级 marketplace 描述
 ├── _meta.json                  # 仓库级元数据（version 4.x = marketplace 主版本）
 ├── scripts/                    # 仓库级开发辅助脚本
-└── <slug>/                     # 27 个 skill 子目录，每个独立可发布
+└── <slug>/                     # 29 个 skill 子目录，每个独立可发布
     ├── SKILL.md                # 该 skill 的主入口（ClawHub 嵌入源，≤ 25KB）
     ├── _meta.json              # ownerId / slug / version
     ├── README.md               # 该 skill 详细文档（不参与 ClawHub 嵌入）
@@ -95,7 +95,7 @@ huo15-skills/
 
 ## 技能列表（按类别）
 
-> 共 **27** 个 skill。全部采用 **MIT License**（可自由商用 / 修改 / 再发布，需保留版权声明 © 青岛火一五信息科技有限公司）。
+> 共 **29** 个 skill。全部采用 **MIT License**（可自由商用 / 修改 / 再发布，需保留版权声明 © 青岛火一五信息科技有限公司）。
 
 ### 一、OpenClaw 工程模式（PR / Plan / Verify / Explore）
 
@@ -108,6 +108,7 @@ huo15-skills/
 | [`huo15-openclaw-security-review`](huo15-openclaw-security-review/) | v1.0.0 | 当前分支 pending 改动安全评审：密钥泄露 / SQLi / XSS / SSRF / 权限绕过 / 危险依赖 |
 | [`huo15-openclaw-simplify`](huo15-openclaw-simplify/) | v1.0.0 | "复用 / 质量 / 效率"三维审查刚写完的代码 + 实际修复命中问题 |
 | [`huo15-openclaw-multi-agent`](huo15-openclaw-multi-agent/) | v2.2.1 | 基于 OpenClaw sessions_spawn 的多 Agent 并行工作系统（协调者模式 / 任务分配 / 结果汇总） |
+| [`huo15-openclaw-desktop-control`](huo15-openclaw-desktop-control/) | v1.0.0 | 火一五桌控（macOS 自动化心法）— desktop-control MCP 36 tool 的"AX 树优先 / act 必带 expect_after / 读 [state] 摘要"使用规范 |
 
 ### 二、学习与知识库
 
@@ -121,7 +122,7 @@ huo15-skills/
 
 | Slug | 版本 | 一句话说明 |
 |------|:----:|-----------|
-| [`huo15-openclaw-bootstrap`](huo15-openclaw-bootstrap/) | v1.1.0 | 龙虾首次开机仪式：4 步搞定身份初始化（基本信息 / 6 经典组合人设 / 领域套餐 / 沟通偏好） |
+| [`huo15-openclaw-bootstrap`](huo15-openclaw-bootstrap/) | **v2.0.0** ⭐ | 龙虾开机仪式 — 对齐 openclaw 2026.5+ 原生工作目录约定，4 步填空 → 写满**原生 5 件套**（SOUL/IDENTITY/USER/TOOLS/AGENTS）→ 删 BOOTSTRAP.md（标记 workspace complete）+ 可选 L3 KB 备份 |
 | [`huo15-openclaw-memory-curator`](huo15-openclaw-memory-curator/) | v1.1.0 | 审查结构化记忆，提取洞察，更新 MEMORY.md，清理过期条目 |
 
 ### 四、文档输出
@@ -132,6 +133,7 @@ huo15-skills/
 | [`huo15-openclaw-ppt`](huo15-openclaw-ppt/) | v3.2.1 | 21 套生产级审美方案（Apple 发布会 / Liquid Glass / Vercel / Linear 等）+ design tokens 驱动 |
 | [`huo15-flow-chart`](huo15-flow-chart/) | v1.4.0 | 2026 现代美学的流程图 / 泳道图 / 系统架构 / C4 / 时序 / 状态 / ER / 甘特图（Linear / Vercel / Radix 风格） |
 | [`huo15-mind-map`](huo15-mind-map/) | v1.2.0 | 思维导图生成（XMind 2021+ / OPML / FreeMind / Markdown 多格式互转） |
+| [`huo15-markdown-export`](huo15-markdown-export/) | **v0.4.0** ⭐ | 火一五排版发布技能 — md → PDF / Word / HTML / 长图 / 公众号 inline / changelog。**11 主题**（报纸 / 暗色 / GitHub / 学术 / 微信 / 小红书 / 火一五品牌 + Anthropic 文档风 / Editorial 杂志 / Manuscript 书稿 / Tufte 边注）+ themes/DESIGN.md 8 大设计范式 + 反 AI Slop 红线 + 对接 enhance 拿公网 URL |
 
 ### 五、设计
 
@@ -162,6 +164,32 @@ huo15-skills/
 ---
 
 ## 重点更新
+
+### `huo15-openclaw-bootstrap` v2.0.0（2026-05）
+
+对齐 **openclaw 2026.5+ 原生工作目录约定**(`src/agents/system-prompt.ts` `CONTEXT_FILE_ORDER` 自动加载 7 个文件):
+
+- **不再产 `profile.md`**(v1.x 设计废弃)，改产**原生 5 件套**:`SOUL.md` / `IDENTITY.md` / `USER.md` / `TOOLS.md` / `AGENTS.md`
+- **完成信号 = 删 `BOOTSTRAP.md`** — 让 openclaw workspace state 转 complete(不删 = 永远 onboarding 模式)
+- **删 L1 龙虾 memory 写盘**(原生 file→memory 链路自己工作,不再复制)
+- **L3 KB 备份保留可选** — `~/knowledge/huo15/profile/` 跨设备/跨 workspace 副本(火一五独有价值)
+- **触发器优先检测 BOOTSTRAP.md 存在**(原生 marker)
+- 新增 7 个 templates(IDENTITY/USER/SOUL/TOOLS/AGENTS/BOOTSTRAP/L3-kb).md.tmpl,各保留原生 frontmatter + "🦞 火一五增强"段(经典组合 / 灵魂权重 / Communication / Working Style / 品牌页脚)
+- 保留:6 经典组合 / 4 步极简流程 / 全默认 30 秒 / 增量更新模式
+
+详见 [huo15-openclaw-bootstrap/SKILL.md](huo15-openclaw-bootstrap/SKILL.md)。
+
+### `huo15-markdown-export` v0.4.0（2026-05）
+
+主题系统重构 + 4 个新预设 + `themes/DESIGN.md` 团队设计规范:
+
+- 抽 [`themes/_tokens.css`](huo15-markdown-export/themes/_tokens.css) 全局 design tokens(字体栈 / 字号阶梯 1.25 Major Third / 行高档位 / 留白 8pt grid / 容器宽 / 语义色),`render.js` 自动 prepend
+- 修 3 处 AI Slop 红线:typora-night Inter→system-ui + 暗底 #1f2329→#121212;huo15-brand 60-30-10 法则(主色 30%→≤10%)+ 去 h2 左竖条;xiaohongshu 去渐变 bg + 去 strong 渐变高亮 + 去图片红光晕
+- 新增 4 个预设:`anthropic-doc`(Stripe 文档风)/ `editorial-magazine`(杂志体 drop cap)/ `manuscript-book`(书稿沉浸)/ `tufte-handout`(Tufte 边注)
+- 主题决策树拆"信息密集 / 视觉沉浸 / 多端发布"三阵营
+- 新增 [`themes/DESIGN.md`](huo15-markdown-export/themes/DESIGN.md) 8 大设计范式 + 反 AI Slop 红线 + 主题选择决策树 + 新主题 7 步 checklist + 发版前红线 grep 自查
+
+详见 [huo15-markdown-export/SKILL.md](huo15-markdown-export/SKILL.md)。
 
 ### `huo15-xiaohongshu` v3.10.0（2026-05）
 
@@ -266,6 +294,7 @@ https://clawhub.ai/skills/huo15-openclaw-code-review
 https://clawhub.ai/skills/huo15-openclaw-security-review
 https://clawhub.ai/skills/huo15-openclaw-simplify
 https://clawhub.ai/skills/huo15-openclaw-multi-agent
+https://clawhub.ai/skills/huo15-openclaw-desktop-control
 https://clawhub.ai/skills/huo15-openclaw-openai-knowledge-base
 https://clawhub.ai/skills/huo15-openclaw-mit-48h-learning-method
 https://clawhub.ai/skills/huo15-karpathy-guidelines
@@ -275,6 +304,7 @@ https://clawhub.ai/skills/huo15-openclaw-office-doc
 https://clawhub.ai/skills/huo15-openclaw-ppt
 https://clawhub.ai/skills/huo15-flow-chart
 https://clawhub.ai/skills/huo15-mind-map
+https://clawhub.ai/skills/huo15-markdown-export
 https://clawhub.ai/skills/huo15-openclaw-frontend-design
 https://clawhub.ai/skills/huo15-openclaw-design-director
 https://clawhub.ai/skills/huo15-openclaw-design-critique
