@@ -213,37 +213,22 @@ bash scripts/md-diff.sh <from-ref> <to-ref> [output.pdf] \
 > **若无 enhance**:JSON 的 priority=2 fallback,AI 把本地 path 告诉用户(降级,但不报错)
 
 ### 模式 G:发布 + 多端 + 自动归档(v0.3.0,**复盘场景首选**)
-> 用户:"把这份 Q1 复盘**发布**出去,我可能要发企微 + 朋友圈 + 邮件"
-> 1. AI 调 `bash scripts/md-publish.sh report.md --slug q1-summary --label "Q1 复盘"`(默认 mode=all)
-> 2. md-publish 一次渲染 4 端产物 + 自动写归档 `~/knowledge/huo15/2026-05-06-q1-summary.md`(带 frontmatter)
-> 3. AI 看 JSON.post_share_actions:对 4 个 file 逐个调 `enhance_share_file` 拿 4 个 URL
-> 4. AI 用 Edit 工具把 4 个 URL **回写**到 KB 归档 frontmatter 的 `share_urls:` 列表(未来翻档案直接拿历史链接)
-> 5. AI 组装"多版本菜单"消息发回当前会话:
->    ```
->    ✓ 已发布"Q1 复盘",4 个版本可选转发(24h 内有效):
->    • 📄 PDF 版(打印/邮件):https://keepermac.huo15.com/plugins/enhance-share/<token>-...pdf
->    • 🖼️ 长图版(朋友圈/小红书):https://...-q1-summary.png
->    • 🌐 网页版(分享链接 / 微信粘贴显示卡片):https://...-q1-summary.html
->    • 📰 公众号 inline 版(粘到编辑器):https://...-q1-summary.wechat.html
->    📁 已归档:~/knowledge/huo15/2026-05-06-q1-summary.md
->    ```
-> 6. **用户自己**决定哪个版本转发到哪个群——人在回路,不替用户广播
-> **若 --with-qr**:AI 还会用 PDF URL 二刷一次 `md2pdf-puppet --qr-url <url>` 生成带二维码的打印版,适合线下海报/客户提案
+> 用户:"把 Q1 复盘**发布**出去,我可能要发企微 + 朋友圈 + 邮件"
+> AI:`bash scripts/md-publish.sh report.md --slug q1-summary --label "Q1 复盘"`(默认 mode=all)
+> → 一次渲染 4 端产物 + 写归档 `~/knowledge/huo15/<日期>-<slug>.md` + JSON.post_share_actions
+> → 4 个 file 各调一次 `enhance_share_file` 拿 URL → AI 用 Edit 把 URL 回写到 KB 归档 frontmatter `share_urls:`
+> → 组装"多版本菜单"消息回当前会话(PDF / 长图 / HTML / 公众号 inline)— **用户自己**决定转发哪个,不替用户广播
+> 加 `--with-qr` 触发"二阶段二维码":AI 用 PDF URL 二刷 `md2pdf-puppet --qr-url <url>` 出打印版
 
 ### 模式 H:卡片预览(v0.3.0)
-> 用户:"把这篇技术文章发个链接给同事,要让他在企微对话框里直接看到标题+摘要预览,不是冷链接"
-> AI 自动用 `md2html.js` 生成 HTML(已默认从 markdown 抽 H1 + 首段作为 OG title/description)
-> → enhance_share_file → URL → 发企微
-> 同事看到的是带卡片预览的链接(微信/企微/Slack/Twitter 都支持 OG)
+> 用户:"发个链接给同事,要在企微对话框里直接看到标题+摘要预览"
+> AI:`md2html.js` 生成 HTML(默认从 markdown 抽 H1 + 首段作 OG title/description)→ `enhance_share_file` → 发企微
+> 同事看到带卡片预览的链接(微信/企微/Slack/Twitter 都支持 OG)
 
 ### 模式 I:线下纸质 ↔ 线上文档(v0.3.0)
-> 用户:"把客户提案打印 50 份发线下,但要让客户能扫码看在线版"
-> 两阶段:
-> 1. 第一阶段:`md-publish.sh proposal.md --mode pdf --with-qr` → enhance 拿 PDF URL
-> 2. 第二阶段:用 PDF URL **二刷** `md2pdf-puppet.js proposal.md proposal-print.pdf --theme huo15-brand --qr-url <PDF URL> --qr-label "扫码看完整在线版"` → 二维码嵌进每页页脚
-> 3. 用户拿这份带二维码的 PDF 去打印
-> 4. 客户扫码 → 跳到 enhance 公网链接 → 在线高保真 PDF
-> 这是"线下材料链接到线上知识库"的标准做法
+> 用户:"客户提案打印 50 份发线下,客户能扫码看在线版"
+> 两阶段:① `md-publish.sh proposal.md --mode pdf --with-qr` 拿 PDF URL ② `md2pdf-puppet --qr-url <PDF URL> --qr-label "扫码看完整在线版"` 二维码进每页页脚
+> 用户打印 → 客户扫码 → 跳 enhance 公网链接看高保真 PDF
 
 ---
 
@@ -373,36 +358,10 @@ bash scripts/md-publish.sh report.md --mode pdf --slug q1-summary
 - "发布出去 + 留档案" → md-publish(归档 + 多端默认 + 二维码可选)
 - 复盘 / 客户提案 / 周月报 / 公司公告 → md-publish
 
-### v0.3.0 新增 OG 卡片(企微/微信粘贴显示标题+摘要)
+### v0.3.0 新增能力(简表)
 
-```bash
-# md2html 自动从 markdown 抽 H1 + 首段做 OG meta
-node scripts/md2html.js article.md  # 自动 og:title=H1, og:description=首段
-
-# 显式指定
-node scripts/md2html.js article.md article.html \
-  --og-title "AI 时代的 Markdown 工具链" \
-  --og-description "把 Typora 拆成 OpenClaw skill 的设计思考" \
-  --og-image https://tools.huo15.com/uploads/cover.png \
-  --og-url https://keepermac.huo15.com/plugins/enhance-share/abc-article.html
-```
-
-效果:HTML 文件粘到企微/微信/Slack 对话框,自动渲染卡片(标题+摘要[+封面图])。
-
-### v0.3.0 新增 PDF 二维码
-
-```bash
-# 第一阶段:正常 publish,拿到 PDF URL
-PDF_URL="https://keepermac.huo15.com/plugins/enhance-share/abc-report.pdf"
-
-# 第二阶段:用 URL 二刷出带二维码的打印版
-node scripts/md2pdf-puppet.js report.md report-print.pdf \
-  --theme huo15-brand \
-  --qr-url "$PDF_URL" \
-  --qr-label "扫码看在线版"
-```
-
-二维码出现在 PDF **每页右下角页脚**(huo15-brand 主题最佳;其他主题也支持)。
+- **OG 卡片**:`md2html` 默认从 H1 + 首段抽 og:title/description;显式覆盖用 `--og-title/--og-description/--og-image/--og-url`。HTML 粘到企微/微信/Slack 自动渲染卡片
+- **PDF 二维码**:两阶段 — ①拿 PDF URL ②`md2pdf-puppet --qr-url <URL> --qr-label "扫码看在线版"`,二维码进每页右下角页脚(huo15-brand 主题最佳)
 
 输出 JSON(stdout)始终遵循 schema:
 
@@ -434,46 +393,26 @@ node scripts/md2pdf-puppet.js report.md report-print.pdf \
 
 ```
 huo15-markdown-export/
-├── SKILL.md                    # 你正在看的这个
-├── README.md                   # 火一五品牌 README
-├── package.json                # npm 依赖
-├── _meta.json                  # ClawHub meta
-├── LICENSE                     # MIT
+├── SKILL.md / README.md / package.json / _meta.json / LICENSE
 ├── scripts/
-│   ├── install-deps.sh         # 一键装 npm + 检测 pandoc/weasyprint
-│   ├── install-to-workspaces.sh # v0.3.1 装到所有 OpenClaw workspace 双层 root + node_modules symlink 共享
-│   ├── md2pdf.sh               # PDF 入口(分发到 puppeteer/pandoc)
-│   ├── md2pdf-puppet.js        # Puppeteer 实现(默认)
-│   ├── md2docx.sh              # Word 导出(Pandoc)
-│   ├── md2html.js              # 单文件自包含 HTML
-│   ├── md2image.js              # 长图 PNG
-│   ├── md2wechat.js            # 微信公众号 inline
-│   ├── md-preview.js           # 本地 live preview(仅 127.0.0.1)
-│   ├── md-share.sh             # 渲染 + 输出 share-ready JSON(对接 enhance,可选)
-│   ├── md-publish.sh           # v0.3.0 多端发布 + KB 归档 + 二阶段 QR 提示
-│   ├── md-diff.sh              # git diff → changelog PDF
-│   └── lib/
-│       └── render.js           # 共享渲染核心
+│   ├── install-deps.sh / install-to-workspaces.sh
+│   ├── md2pdf.sh + md2pdf-puppet.js   # PDF
+│   ├── md2docx.sh                      # Word(Pandoc)
+│   ├── md2html.js                      # HTML 自包含 + OG 卡片
+│   ├── md2image.js                     # 长图 PNG
+│   ├── md2wechat.js                    # 微信公众号 inline
+│   ├── md-preview.js                   # 127.0.0.1 live preview
+│   ├── md-share.sh / md-publish.sh    # 对接 enhance(JSON)
+│   ├── md-diff.sh                      # git → changelog PDF
+│   └── lib/render.js                   # 共享渲染核心
 ├── themes/
-│   ├── DESIGN.md               # v0.4.0 设计规范(8 大范式 + 反 AI Slop 红线 + 命名规范)
-│   ├── _tokens.css             # v0.4.0 全局 design tokens(字体/字号/行高/留白/容器宽/语义色)
-│   ├── typora-newsprint.css    # 报纸风(默认)— 信息密
-│   ├── typora-night.css        # 暗色 — 夜间阅读
-│   ├── github.css              # GitHub README 风 — 开源 / API 文档
-│   ├── academic.css            # 学术论文(IEEE 三线表)
-│   ├── huo15-brand.css         # 火一五品牌(带页眉页脚)— 客户提案 / 内部周报
-│   ├── anthropic-doc.css       # v0.4.0 Anthropic / Stripe 文档风 — 技术博客主流审美
-│   ├── editorial-magazine.css  # v0.4.0 杂志体(drop cap / 大留白 / 满版图)— 品牌故事
-│   ├── manuscript-book.css     # v0.4.0 书稿 / 小说体 — 沉浸长文
-│   ├── tufte-handout.css       # v0.4.0 Tufte 边注体 — 数据分析 / 研究报告
-│   ├── wechat.css              # 微信公众号(hardcode,juice 内联化前)
-│   └── xiaohongshu.css         # 小红书长图(hardcode,1080px PNG)
-├── templates/
-│   ├── pdf-print.css           # @page + 打印规则
-│   └── README.md               # 主题决策树 + reference.docx 自定义指南
-└── examples/
-    ├── sample.md               # 全功能样例
-    └── chart-demo.md           # mermaid 4 种图
+│   ├── DESIGN.md   ⭐ v0.4.0          # 设计规范(必读)
+│   ├── _tokens.css ⭐ v0.4.0          # design tokens
+│   ├── typora-newsprint / -night / github / academic / huo15-brand
+│   ├── anthropic-doc / editorial-magazine / manuscript-book / tufte-handout  ⭐ v0.4.0
+│   └── wechat / xiaohongshu           # hardcode(目标编辑器剥 var)
+├── templates/{pdf-print.css, README.md}
+└── examples/{sample.md, chart-demo.md}
 ```
 
 ---
@@ -492,21 +431,12 @@ huo15-markdown-export/
     - `manuscript-book` — 书稿 / 小说体,单一衬线 + 1.95 行高 + 章标居中 + 0 装饰 + 段首缩进(无干扰沉浸阅读)
     - `tufte-handout` — Tufte 边注体,窄主文 + 右挂边注(≥1100px)+ 三线表 + ET Book 衬线感(数据分析 / 研究报告)
   - 主题决策树拆"信息密集 / 视觉沉浸 / 多端发布"三阵营(更易选)
-- **v0.3.1**(2026-05-06):新增 `scripts/install-to-workspaces.sh`,治本多 workspace 安装陷阱
-  - **背景**:ClawHub install 装到单层 `~/.openclaw/workspace/skills/<slug>/`,但 OpenClaw loader 实扫双层 `workspace/skills/skills/<slug>/`,装错位置 skill list 看不见
-  - **方案**:实体 cp skill 文件到所有 workspace 真实双层 root,**node_modules 用 symlink 指向 default workspace**(节省磁盘 6GB → 100MB)
-  - **关键洞察**:OpenClaw safety filter 只校验 SKILL.md realpath,不扫 node_modules,symlink 安全
-  - 支持 `--dry-run` / `--skip-default`;自动清单层幽灵
-  - 参考 cc-media-bridge/skill/install-to-workspaces.sh,memory `feedback_openclaw_skill_install_pitfalls.md`
-  - **任何后续 huo15-* skill 装不上 → 直接抄此脚本**
-- **v0.3.0**(2026-05-06):
-  - 新增 `md-publish.sh` — 多端发布 + 自动归档到 `~/knowledge/huo15/<date>-<slug>.md` + 二阶段 QR 提示
-  - HTML 自动加 OG 卡片(从 markdown 抽 H1 + 首段),企微/微信/Slack 粘贴显示标题摘要预览;`md2html` 加 `--og-title/--og-description/--og-image/--og-url` 显式覆盖
-  - PDF 加 `--qr-url` / `--qr-label`,二维码渲染到每页右下角页脚(线下纸质 ↔ 线上文档)
-  - 增加 5 条踩坑 + 3 个 AI 调用模式(G/H/I)
-  - 新增依赖:`qrcode`(SVG dataURL 二维码,纯 JS 无外部二进制)
-- **v0.2.0**(2026-05-05):新增 `md-share.sh` + capability detection 集成 huo15-openclaw-enhance — 企微/钉钉/微信对话渲染送达,AI 自动 chain 调 `enhance_share_file` 拿公网 URL;无 enhance 优雅降级到本地路径。无硬依赖。
-- **v0.1.0**(2026-05-05):首发。7 主题 + 7 脚本(pdf/docx/html/image/wechat/preview/diff)+ KaTeX + mermaid + highlight.js + 火一五品牌页眉页脚。
+- **v0.3.1**(2026-05-06):`scripts/install-to-workspaces.sh` 治本多 workspace 安装陷阱(双层 root + node_modules symlink)
+- **v0.3.0**(2026-05-06):`md-publish.sh` 多端发布 + KB 归档;HTML OG 卡片;PDF `--qr-url` 二维码;`qrcode` 依赖
+- **v0.2.0**(2026-05-05):`md-share.sh` + capability detection 集成 enhance(企微对话拿公网 URL)
+- **v0.1.0**(2026-05-05):首发。7 主题 + 7 脚本 + KaTeX + mermaid + highlight.js + 品牌页眉页脚
+
+> 详细 changelog 见 `git log` / cnb.cool 仓库 commit history
 
 ---
 
