@@ -144,6 +144,7 @@ huo15-skills/
 | [`huo15-openclaw-frontend-design`](huo15-openclaw-frontend-design/) | v4.7.0 | 高保真 Web UI / H5 / iOS / Android / HarmonyOS / 微信+支付宝+抖音+快手 四端小程序 原生风格原型 |
 | [`huo15-openclaw-design-director`](huo15-openclaw-design-director/) | v3.0.0 | 6 大美学流派 × 24 设计哲学库 → 3 方向反差对比（hex 配色 + 字体 + 当代标杆） |
 | [`huo15-openclaw-design-critique`](huo15-openclaw-design-critique/) | v2.0.0 | 6 维设计评审（美学 / 可用性 / 品牌 / 内容 / 技术 / 时代感）+ 审美档位识别（AI-Slop / Junior / Senior / Master） |
+| [`huo15-design`](huo15-design/) | v1.0.0 | 物料**生产交付**层：HTML→4K 截图出图 / HTML→A4 PDF 双面拼版（对齐免镜像·极浅细线剪裁·印刷可读性）/ 原研哉极简印刷风 / 微信分享卡 / 位图复刻 SVG / 上 OSS。与 frontend-design 接力（美学→出图印刷上线） |
 | [`huo15-openclaw-brand-protocol`](huo15-openclaw-brand-protocol/) | v1.0.0 | 抓品牌规范产出 brand-spec.md（5 步：Ask / Search / Download / Verify+Extract / Codify） |
 | [`huo15-img-prompt`](huo15-img-prompt/) | v3.2.0 | 文生图提示词中枢，14 件套 + 88 预设审美锚点 + 故事板 / 品牌套件 / 风格学习 / doctor 健康检查 |
 

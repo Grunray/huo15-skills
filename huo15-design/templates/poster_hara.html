@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<!--
+  原研哉极简海报起手式（横版 1920×1080）。出图：
+    node ../scripts/cap_poster.js poster_hara.html out.png 1920 1080 2
+  改文案/图片即可；竖版把 .poster 改 1080×1920 并调排版。铁律：图标内联 SVG、留白、单色+一点朱红。
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  .poster {
+    width:1920px; height:1080px; background:#f4f3ee;   /* 米白纸底 */
+    font-family:"PingFang SC","Hiragino Sans GB",sans-serif;
+    padding:120px 140px; display:flex; flex-direction:column; justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+  .kicker { font-size:26px; font-weight:400; color:#888; letter-spacing:.3em; }
+  .title  { font-size:120px; font-weight:400; color:#1a1a1a; letter-spacing:.04em; margin:28px 0 0; }
+  .title .accent { color:#A83A2C; }     /* 唯一一点朱红 */
+  .subtitle { font-size:30px; font-weight:400; color:#666; letter-spacing:.1em; margin-top:24px; }
+  .tagline { font-size:34px; font-weight:400; color:#444; margin-top:80px; line-height:1.7; }
+  .foot { margin-top:auto; font-size:22px; font-weight:400; color:#999; letter-spacing:.06em; }
+</style></head>
+<body>
+  <div class="poster">
+    <div class="kicker">2026 年主题 · THEME 2026</div>
+    <div class="title">主题大字<span class="accent">·</span>副题</div>
+    <div class="subtitle">ENGLISH SUBTITLE / 一句话定位</div>
+    <div class="tagline">一句中文寄语，留足呼吸空间。<br>One line of English, quiet and spare.</div>
+    <div class="foot">青岛火一五信息科技有限公司 · 逸寻智库</div>
+  </div>
+</body></html>
