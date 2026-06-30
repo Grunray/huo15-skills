@@ -1,8 +1,8 @@
 ---
 name: huo15-yh-usage
 displayName: 火一五·烟花智汇用量账单
-version: 1.0.0
-description: "凭客户烟花智汇 API Key(fsk-)查询该 Key 的 token 用量与费用——总览/按模型/按天趋势,数据来自平台服务端权威计费(含缓存折价、分组倍率),费用以 ¥ 计。"
+version: 1.1.0
+description: "凭客户烟花智汇 API Key(fsk-)查询该 Key 的 token 用量与费用——总览/按供应商/按模型/按天趋势,人民币¥与美元$双币种可切换(--usd),数据来自平台服务端权威计费(含缓存折价、分组倍率)。"
 homepage: https://github.com/zhaobod1/huo15-skills
 metadata: { "openclaw": { "emoji": "🎆", "requires": { "bins": ["node"] } } }
 aliases:
@@ -31,8 +31,9 @@ aliases:
 **优先跑脚本**(零依赖,Node 18+ 自带 fetch):
 
 ```bash
-node scripts/usage.mjs <fsk-...客户的key> [天数=30]
-# 例:node scripts/usage.mjs fsk-xxxxxxxx 30
+node scripts/usage.mjs <fsk-...客户的key> [天数=30] [--usd]
+# 例:node scripts/usage.mjs fsk-xxxxxxxx 30          # 人民币 ¥
+#     node scripts/usage.mjs fsk-xxxxxxxx 30 --usd    # 美元 $(按端点 usdRate 折算)
 # 要原始 JSON:加 --json
 ```
 
@@ -47,7 +48,9 @@ curl -s "https://fireworks-simulator-api.huo15.com/v1/usage?days=30" -H "Authori
 ## 数据端点(平台侧,fsk- key 鉴权)
 `GET /v1/usage?days=<1-90>` → 返回:
 - `totals`:`calls` 调用数、`promptTokens` 输入、`completionTokens` 输出、`cachedTokens` 命中缓存、`totalTokens` 合计、`cost` 费用(CNY)。
+- `byProvider[]`:每**供应商**(烟花智汇接入的 Sidus/润嘉云/OpenSand/DeepSeek 等)`provider/calls/totalTokens/cost`,**按费用降序**——看钱花在哪家。
 - `byModel[]`:每模型 `model/calls/promptTokens/completionTokens/totalTokens/cost`,**按费用降序**。
+- `currency:"CNY"` + `currencies:["CNY","USD"]` + `usdRate`(人民币/美元):美元 = cost / usdRate,供 `--usd` 与客户端币种切换。
 - `daily[]`:每天 `day/tokens/cost/calls`。
 - `key`:`name` + 脱敏 `masked`(`fsk-••••后四位`);`currency: "CNY"`。
 
