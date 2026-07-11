@@ -1,0 +1,439 @@
+#!/usr/bin/env node
+/**
+ * configure.mjs — 聚星逸(Juxingyi) OpenClaw 配置脚本
+ *
+ * 动态从 /v1/models 端点拉取最新可用模型列表，自动分类并写入
+ * ~/.openclaw/openclaw.json 的 models.providers.fireworks-hub 段。
+ *
+ * 用法:
+ *   node configure.mjs <fsk-key>                    # 配置 provider，默认 DeepSeek-V4-Flash
+ *   node configure.mjs <fsk-key> --list             # 列出所有可用模型（动态获取）
+ *   node configure.mjs <fsk-key> --json             # 输出 JSON 配置片段（不写文件）
+ *   node configure.mjs --switch <model-id>          # 切换主模型
+ *   node configure.mjs --show                       # 查看当前聚星逸配置
+ *   node configure.mjs <fsk-key> --env              # 用环境变量引用存储密钥
+ *
+ * 零依赖，仅需 Node 18+（自带 fetch）。
+ * 青岛火一五信息科技有限公司
+ */
+
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs'
+import { homedir } from 'os'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const OPENCLAW_JSON = join(homedir(), '.openclaw', 'openclaw.json')
+const HEURISTICS_PATH = join(__dirname, '..', 'data', 'model-heuristics.json')
+
+// ============================================================
+// 参数解析
+// ============================================================
+const args = process.argv.slice(2)
+const flags = {
+  list: args.includes('--list'),
+  json: args.includes('--json'),
+  show: args.includes('--show'),
+  env: args.includes('--env'),
+}
+const switchIdx = args.indexOf('--switch')
+const switchModel = switchIdx >= 0 ? args[switchIdx + 1] : null
+const keyArg = args.find(a => a.startsWith('fsk-'))
+
+// ============================================================
+// 加载启发式数据
+// ============================================================
+const H = JSON.parse(readFileSync(HEURISTICS_PATH, 'utf8'))
+const BASE_URL = H.baseUrl
+const PROVIDER = H.providerName
+const DEFAULT_MODEL = H.defaultModel
+
+// ============================================================
+// 工具函数
+// ============================================================
+function classifyModel(id) {
+  // 1) 检查 skipPatterns（生图/视频模型，不配文本对话）
+  const skipRe = new RegExp(H.skipPatterns.join('|'), 'i')
+  if (skipRe.test(id)) return null
+
+  // 2) 已知模型直接返回
+  if (H.knownModels[id]) return H.knownModels[id]
+
+  // 3) 模式匹配分类
+  const tier = guessTier(id)
+  return { ...H.defaults, tier, _inferred: true }
+}
+
+function guessTier(id) {
+  for (const [tier, patterns] of Object.entries(H.tierPatterns)) {
+    if (patterns.some(p => new RegExp(p, 'i').test(id))) return tier
+  }
+  return H.defaults.tier
+}
+
+function tierWeight(tier) {
+  return { flash: 0, pro: 1, reasoner: 2 }[tier] ?? 1
+}
+
+function fmtModelName(id) {
+  return id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function timestamp() {
+  return new Date().toISOString().replace(/[:.]/g, '-')
+}
+
+// ============================================================
+// 从 API 动态获取模型列表
+// ============================================================
+async function fetchModels(apiKey) {
+  const url = `${BASE_URL}/models`
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  }).catch(e => { throw new Error(`网络请求失败: ${e.message}`) })
+
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => '')
+    throw new Error(`API 返回 ${resp.status}: ${body.slice(0, 200)}`)
+  }
+  const data = await resp.json()
+  return data.data || data.models || []
+}
+
+// ============================================================
+// 生成 provider 配置
+// ============================================================
+function buildProviderConfig(apiKey, rawModels) {
+  const textModels = []
+  for (const m of rawModels) {
+    const id = m.id
+    const meta = classifyModel(id)
+    if (!meta) continue // 跳过生图/视频
+    textModels.push({
+      id,
+      name: `${fmtModelName(id)} (聚星逸)`,
+      reasoning: meta.reasoning,
+      contextWindow: meta.contextWindow,
+      maxTokens: meta.maxTokens,
+      input: ['text'],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    })
+  }
+
+  // 按 tier 权重排序：flash → pro → reasoner
+  textModels.sort((a, b) => {
+    const ta = guessTier(a.id)
+    const tb = guessTier(b.id)
+    if (ta !== tb) return tierWeight(ta) - tierWeight(tb)
+    return a.id.localeCompare(b.id)
+  })
+
+  const apiKeyField = flags.env
+    ? { source: 'env', provider: 'default', id: H.envVarName }
+    : apiKey
+
+  return {
+    baseUrl: BASE_URL,
+    apiKey: apiKeyField,
+    api: 'openai-completions',
+    models: textModels,
+  }
+}
+
+// ============================================================
+// 生成 agents.defaults 配置（primary + fallbacks + aliases）
+// ============================================================
+function buildAgentsDefaults(textModels, primaryId) {
+  const prefixed = textModels.map(m => `${PROVIDER}/${m.id}`)
+  const primary = `${PROVIDER}/${primaryId}`
+  const fallbacks = prefixed.filter(p => p !== primary)
+
+  const models = {}
+  for (const m of textModels) {
+    models[`${PROVIDER}/${m.id}`] = { alias: m.name }
+  }
+
+  return { primary, fallbacks, models }
+}
+
+// ============================================================
+// 读取/写入 openclaw.json
+// ============================================================
+function readOpenclawJson() {
+  if (!existsSync(OPENCLAW_JSON)) {
+    throw new Error(`未找到 ${OPENCLAW_JSON}\n请先运行 openclaw 初始化。`)
+  }
+  return JSON.parse(readFileSync(OPENCLAW_JSON, 'utf8'))
+}
+
+function backupOpenclawJson() {
+  const bakPath = `${OPENCLAW_JSON}.bak.${timestamp()}`
+  copyFileSync(OPENCLAW_JSON, bakPath)
+  return bakPath
+}
+
+function writeOpenclawJson(config) {
+  const bak = backupOpenclawJson()
+  writeFileSync(OPENCLAW_JSON, JSON.stringify(config, null, 2) + '\n', 'utf8')
+  return bak
+}
+
+// ============================================================
+// 深度合并（provider 级别覆盖，其他保留）
+// ============================================================
+function deepMerge(target, source) {
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) &&
+      target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])
+    ) {
+      deepMerge(target[key], source[key])
+    } else {
+      target[key] = source[key]
+    }
+  }
+  return target
+}
+
+// ============================================================
+// 主逻辑
+// ============================================================
+async function main() {
+  // --- show 模式 ---
+  if (flags.show) {
+    return cmdShow()
+  }
+
+  // --- switch 模式 ---
+  if (switchModel) {
+    return cmdSwitch(switchModel)
+  }
+
+  // --- 以下模式需要 API key ---
+  if (!keyArg) {
+    console.error(
+      '用法: node configure.mjs <fsk-key> [--list|--json|--env]\n' +
+      '      node configure.mjs --switch <model-id>\n' +
+      '      node configure.mjs --show\n\n' +
+      '缺少聚星逸 API Key（fsk- 开头）。'
+    )
+    process.exit(1)
+  }
+
+  // 动态获取模型
+  const rawModels = await fetchModels(keyArg)
+  const providerConfig = buildProviderConfig(keyArg, rawModels)
+  const textModels = providerConfig.models
+  const agentsCfg = buildAgentsDefaults(textModels, DEFAULT_MODEL)
+
+  // --- list 模式 ---
+  if (flags.list) {
+    return cmdList(textModels, rawModels)
+  }
+
+  // --- json 模式 ---
+  if (flags.json) {
+    return cmdJson(providerConfig, agentsCfg)
+  }
+
+  // --- 默认: 配置 openclaw.json ---
+  return cmdConfigure(providerConfig, agentsCfg)
+}
+
+// ============================================================
+// 子命令实现
+// ============================================================
+
+function cmdList(textModels, rawModels) {
+  console.log(`\n🛰️  聚星逸 · 可用模型列表（动态获取）`)
+  console.log(`   共 ${rawModels.length} 个模型，其中 ${textModels.length} 个文本对话模型\n`)
+
+  const tiers = { flash: [], pro: [], reasoner: [] }
+  for (const m of textModels) {
+    const tier = guessTier(m.id)
+    if (!tiers[tier]) tiers[tier] = []
+    tiers[tier].push(m)
+  }
+
+  const tierLabels = { flash: '⚡ Flash（快速）', pro: '🚀 Pro（主力）', reasoner: '🧠 Reasoner（深度推理）' }
+  for (const [tier, models] of Object.entries(tiers)) {
+    if (!models.length) continue
+    console.log(tierLabels[tier] || `📌 ${tier}`)
+    for (const m of models) {
+      const tag = m.id === DEFAULT_MODEL ? ' ← 默认' : ''
+      const ctxK = (m.contextWindow / 1024).toFixed(0)
+      console.log(`  ${m.id.padEnd(28)} ${ctxK.padStart(6)}K ctx  ${m.reasoning ? '推理' : '    '}  ${m.name}${tag}`)
+    }
+    console.log()
+  }
+
+  const skipped = rawModels.filter(m => !textModels.find(t => t.id === m.id))
+  if (skipped.length) {
+    console.log('🎬 生图/视频模型（不配置文本对话）')
+    for (const m of skipped) {
+      console.log(`  ${m.id.padEnd(28)} ${m.owned_by || ''}`)
+    }
+  }
+}
+
+function cmdJson(providerConfig, agentsCfg) {
+  const snippet = {
+    models: { providers: { [PROVIDER]: providerConfig } },
+    agents: {
+      defaults: {
+        model: { primary: agentsCfg.primary, fallbacks: agentsCfg.fallbacks },
+        models: agentsCfg.models,
+      },
+    },
+  }
+  console.log(JSON.stringify(snippet, null, 2))
+}
+
+function cmdConfigure(providerConfig, agentsCfg) {
+  const config = readOpenclawJson()
+
+  // 合并 provider
+  if (!config.models) config.models = {}
+  if (!config.models.providers) config.models.providers = {}
+  if (!config.models.mode) config.models.mode = 'replace'
+  config.models.providers[PROVIDER] = providerConfig
+
+  // 合并 agents.defaults
+  if (!config.agents) config.agents = {}
+  if (!config.agents.defaults) config.agents.defaults = {}
+  config.agents.defaults.model = {
+    primary: agentsCfg.primary,
+    fallbacks: agentsCfg.fallbacks,
+  }
+  // 合并 model aliases（保留已有的非 fireworks-hub 条目）
+  const existingModels = config.agents.defaults.models || {}
+  // 清理旧的 fireworks-hub 条目
+  for (const key of Object.keys(existingModels)) {
+    if (key.startsWith(`${PROVIDER}/`)) delete existingModels[key]
+  }
+  // 合并新条目
+  for (const [key, val] of Object.entries(agentsCfg.models)) {
+    existingModels[key] = val
+  }
+  config.agents.defaults.models = existingModels
+
+  const bak = writeOpenclawJson(config)
+
+  // 输出结果
+  console.log(`\n✅ 聚星逸配置完成！`)
+  console.log(`   备份: ${bak}`)
+  console.log(`   模型数: ${providerConfig.models.length} 个文本对话模型`)
+  console.log(`   主模型: ${agentsCfg.primary}`)
+  console.log(`   备选链: ${agentsCfg.fallbacks.length} 个模型`)
+  console.log(`   密钥存储: ${flags.env ? `环境变量 ${H.envVarName}` : '直接写入（明文）'}\n`)
+
+  console.log('   主模型 & 备选链:')
+  console.log(`   ★ ${agentsCfg.primary}`)
+  for (const f of agentsCfg.fallbacks) {
+    console.log(`     ${f}`)
+  }
+  console.log()
+
+  if (flags.env) {
+    console.log(`⚠️  请确保环境变量 ${H.envVarName} 已设置:`)
+    console.log(`   export ${H.envVarName}=fsk-你的密钥`)
+    console.log()
+  }
+
+  console.log('重启 OpenClaw 后生效。')
+}
+
+function cmdSwitch(modelId) {
+  const config = readOpenclawJson()
+  const providers = config.models?.providers || {}
+  const prov = providers[PROVIDER]
+
+  if (!prov) {
+    console.error(`未找到 ${PROVIDER} provider，请先运行配置: node configure.mjs <fsk-key>`)
+    process.exit(1)
+  }
+
+  const modelIds = (prov.models || []).map(m => m.id)
+  const fullId = modelIds.includes(modelId) ? modelId :
+                 modelIds.find(m => m.toLowerCase() === modelId.toLowerCase())
+
+  if (!fullId) {
+    console.error(`模型 "${modelId}" 不在聚星逸可用列表中。`)
+    console.error(`可用模型: ${modelIds.join(', ')}`)
+    process.exit(1)
+  }
+
+  const oldPrimary = config.agents?.defaults?.model?.primary || '(未设置)'
+  const newPrimary = `${PROVIDER}/${fullId}`
+
+  if (!config.agents) config.agents = {}
+  if (!config.agents.defaults) config.agents.defaults = {}
+  if (!config.agents.defaults.model) config.agents.defaults.model = {}
+
+  config.agents.defaults.model.primary = newPrimary
+
+  // 从 fallbacks 中移除新 primary（如果存在）
+  const fallbacks = config.agents.defaults.model.fallbacks || []
+  config.agents.defaults.model.fallbacks = fallbacks.filter(f => f !== newPrimary)
+
+  // 把旧 primary 加入 fallbacks（如果不在的话）
+  if (oldPrimary !== newPrimary && oldPrimary !== '(未设置)' && !fallbacks.includes(oldPrimary)) {
+    config.agents.defaults.model.fallbacks.unshift(oldPrimary)
+  }
+
+  const bak = writeOpenclawJson(config)
+
+  console.log(`\n✅ 主模型已切换`)
+  console.log(`   备份: ${bak}`)
+  console.log(`   旧主: ${oldPrimary}`)
+  console.log(`   新主: ${newPrimary}`)
+  console.log(`   备选: ${config.agents.defaults.model.fallbacks.length} 个模型\n`)
+  console.log('重启 OpenClaw 后生效。')
+}
+
+function cmdShow() {
+  const config = readOpenclawJson()
+  const prov = config.models?.providers?.[PROVIDER]
+
+  if (!prov) {
+    console.log(`\n❌ 尚未配置聚星逸 (${PROVIDER})。`)
+    console.log(`   运行: node configure.mjs <fsk-key>\n`)
+    return
+  }
+
+  const primary = config.agents?.defaults?.model?.primary || '(未设置)'
+  const fallbacks = config.agents?.defaults?.model?.fallbacks || []
+
+  console.log(`\n🛰️  聚星逸当前配置`)
+  console.log(`   Provider: ${PROVIDER}`)
+  console.log(`   Base URL: ${prov.baseUrl}`)
+  console.log(`   API 类型: ${prov.api}`)
+  const keyDisplay = typeof prov.apiKey === 'string'
+    ? `直接密钥 (${prov.apiKey.slice(0, 8)}…)`
+    : `环境变量 ${prov.apiKey?.id || '?'}`
+  console.log(`   密钥方式: ${keyDisplay}`)
+  console.log(`   文本模型: ${(prov.models || []).length} 个`)
+  console.log(`   主模型:   ${primary}`)
+
+  if (fallbacks.length) {
+    console.log(`   备选链:`)
+    for (const f of fallbacks) console.log(`     ${f}`)
+  }
+  console.log()
+
+  // 列出所有已配模型
+  if (prov.models?.length) {
+    console.log('   已配模型:')
+    for (const m of prov.models) {
+      const mark = `${PROVIDER}/${m.id}` === primary ? ' ★' : '  '
+      console.log(`   ${mark} ${m.id.padEnd(28)} ${(m.contextWindow / 1024).toFixed(0).padStart(6)}K  ${m.reasoning ? '推理' : '    '}`)
+    }
+  }
+  console.log()
+}
+
+// ============================================================
+main().catch(err => {
+  console.error(`\n❌ ${err.message}\n`)
+  process.exit(1)
+})

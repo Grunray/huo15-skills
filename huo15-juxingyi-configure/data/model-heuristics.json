@@ -1,0 +1,57 @@
+{
+  "baseUrl": "https://fireworks-simulator-api.huo15.com/v1",
+  "providerName": "fireworks-hub",
+  "providerDisplayName": "聚星逸",
+  "envVarName": "FIREWORKS_API_KEY",
+  "defaultModel": "DeepSeek-V4-Flash",
+
+  "skipPatterns": [
+    "Image", "Seedream", "T2V", "I2V", "happyhorse"
+  ],
+
+  "knownModels": {
+    "DeepSeek-V4-Flash":     { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "flash"    },
+    "DeepSeek-V4-Pro":       { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "DeepSeek-V3.2":         { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "DeepSeek-V3.1":         { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "DeepSeek-R1-0528":      { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "reasoner" },
+    "GPT-5.5":               { "reasoning": true,  "contextWindow": 128000,  "maxTokens": 8192, "tier": "pro"      },
+    "GPT-5.4":               { "reasoning": true,  "contextWindow": 128000,  "maxTokens": 8192, "tier": "reasoner" },
+    "claude-opus-4-8":       { "reasoning": true,  "contextWindow": 200000,  "maxTokens": 8192, "tier": "pro"      },
+    "claude-opus-4-7":       { "reasoning": true,  "contextWindow": 200000,  "maxTokens": 8192, "tier": "reasoner" },
+    "claude-sonnet-4-6":     { "reasoning": true,  "contextWindow": 200000,  "maxTokens": 8192, "tier": "pro"      },
+    "claude-opus-4-6":       { "reasoning": true,  "contextWindow": 200000,  "maxTokens": 8192, "tier": "pro"      },
+    "Qwen3.7-Max":           { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "Qwen3.7-Plus":          { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "flash"    },
+    "Qwen3.6-max-preview":   { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "Qwen2.5-72B-Instruct":  { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "GLM-5.2":               { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "GLM-5.1":               { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "GLM-5-Turbo":           { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "flash"    },
+    "GLM-4.7":               { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "Gemini-3.5-Flash":      { "reasoning": false, "contextWindow": 1048576, "maxTokens": 8192, "tier": "flash"    },
+    "Kimi-K2.6":             { "reasoning": true,  "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      },
+    "MiniMax-M3":            { "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "pro"      },
+    "MiniMax-M2.7":          { "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "pro"      },
+    "MiniMax-M2.7-highspeed":{ "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "flash"    },
+    "MiniMax-M2.5":          { "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "pro"      },
+    "MiniMax-M2.5-highspeed":{ "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "flash"    },
+    "MiniMax-M2.1":          { "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "pro"      },
+    "MiniMax-M2.1-highspeed":{ "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "flash"    },
+    "MiniMax-M2":            { "reasoning": false, "contextWindow": 204800,  "maxTokens": 8192, "tier": "pro"      },
+    "Doubao-Seed-2.0-Pro":   { "reasoning": false, "contextWindow": 131072,  "maxTokens": 8192, "tier": "pro"      }
+  },
+
+  "tierPatterns": {
+    "flash":    ["Flash", "Turbo", "lite", "highspeed", "Mini"],
+    "reasoner": ["R1", "reasoner", "thinking", "o1", "o3"],
+    "pro":      ["Pro", "Max", "Opus", "Plus", "Sonnet"]
+  },
+
+  "defaults": {
+    "reasoning": false,
+    "contextWindow": 131072,
+    "maxTokens": 8192,
+    "tier": "pro"
+  }
+}
