@@ -1,0 +1,39 @@
+# Node / npm
+node_modules/
+*.log
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# macOS
+.DS_Store
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+*.temp
+.cache/
+*.bak
+*.orig
+
+# Secrets & credentials
+.env
+.env.*
+*.key
+*.pem
+secrets/
+credentials/
+
+# Skill 私有草稿（不发布）
+docs/private/
+docs/chats/private/
+
+# ClawHub 本地缓存
+.clawhub-cache/

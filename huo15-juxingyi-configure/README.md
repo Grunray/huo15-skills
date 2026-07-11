@@ -1,16 +1,36 @@
 # 聚星逸配置 · huo15-juxingyi-configure
 
-> 动态拉取聚星逸最新模型列表，自动配置 OpenClaw —— 一个 fsk- 密钥调 50+ 顶级大模型。
+---
+
+<div align="center">
+
+<img src="https://tools.huo15.com/uploads/images/system/logo-colours.png" alt="火一五Logo" style="width: 120px; height: auto; display: inline; margin: 0;" />
+
+</div>
+
+<div align="center">
+
+<h3>一个 Key 调 50+ 顶级大模型</h3>
+<h3>动态拉取 · 自动配置 · 零 token 探索</h3>
+
+</div>
+
+<div align="center">
+
+| 🏫 教学机构 | 👨‍🏫 讲师 | 📧 联系方式         | 💬 QQ群      | 📺 配套视频                         |
+|:-----------:|:--------:|:------------------:|:-----------:|:-----------------------------------:|
+| 逸寻智库 | Job | support@huo15.com | 1093992108  | [📺 B站视频](https://space.bilibili.com/400418085) |
+
+</div>
 
 ---
 
 <div align="center">
 
-**青岛火一五信息科技有限公司** · postmaster@huo15.com · QQ群 1093992108
-
 ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0-blue)
+![ClawHub](https://img.shields.io/badge/ClawHub-published-ff6b6b)
 
 </div>
 
@@ -18,14 +38,15 @@
 
 ## 这是什么
 
-`huo15-juxingyi-configure` 是一个 OpenClaw 专用 skill，帮你快速接入聚星逸（Juxingyi）大模型聚合平台：
+`huo15-juxingyi-configure` 是 OpenClaw 专用 skill，帮你快速接入聚星逸（Juxingyi）大模型聚合平台：
 
 1. **动态拉取**：每次运行都从 `/v1/models` 端点获取最新可用模型列表
 2. **自动分类**：文本对话模型 vs 生图/视频模型（自动跳过后者），按 tier 分组
 3. **一键配置**：自动写入 `~/.openclaw/openclaw.json`，设 `DeepSeek-V4-Flash` 为主模型
-4. **灵活切换**：配置后随时切换主模型，或查看当前配置
+4. **灵活切换**：配置后询问是否切换，随时用 `--switch` 换主模型
+5. **安全可靠**：写入前自动备份，支持环境变量引用存储密钥
 
-> 与手动配置的区别：不需要记住模型 ID、不需要手动写 JSON、不会漏掉新模型（平台新增后脚本自动发现）。
+> **不用每次消耗 token 去探索配置格式和模型列表**——SKILL.md 嵌入完整知识，脚本动态获取最新数据。
 
 ---
 
@@ -38,7 +59,7 @@
 clawhub install huo15-juxingyi-configure --dir ~/.openclaw/workspace/skills
 
 # 或从源码安装
-git clone git@github.com:zhaobod1/huo15-skills.git
+git clone https://cnb.cool/huo15/ai/huo15-skills.git
 cp -r huo15-skills/huo15-juxingyi-configure/ ~/.openclaw/workspace/skills/
 ```
 
@@ -46,8 +67,7 @@ cp -r huo15-skills/huo15-juxingyi-configure/ ~/.openclaw/workspace/skills/
 
 **1. 获取聚星逸 API Key**
 
-- 打开 [聚星逸控制台](https://fireworks-simulator.huo15.com/app/)
-- 登录后进入「API 密钥」页，创建一个 `fsk-` 开头的密钥
+打开 [聚星逸控制台](https://fireworks-simulator.huo15.com/app/) →「API 密钥」页，创建一个 `fsk-` 开头的密钥。
 
 **2. 运行配置脚本**
 
@@ -56,17 +76,15 @@ cd ~/.openclaw/workspace/skills/huo15-juxingyi-configure
 node scripts/configure.mjs <fsk-key>
 ```
 
-脚本会：
-- 动态拉取最新模型列表
-- 自动分类并写入 `~/.openclaw/openclaw.json`
-- 默认设 `DeepSeek-V4-Flash` 为主模型
-- 自动备份原配置
+脚本动态拉取最新模型列表，自动分类并写入 `~/.openclaw/openclaw.json`，默认设 `DeepSeek-V4-Flash` 为主模型。
 
 **3. 重启 OpenClaw**
 
 ```bash
 openclaw restart
 ```
+
+> 完整操作流程见 [用户手册 SOP](docs/user-guide.md)
 
 ---
 
@@ -83,66 +101,13 @@ openclaw restart
 
 ---
 
-## 示例输出
-
-### 配置成功
-
-```
-✅ 聚星逸配置完成！
-   备份: ~/.openclaw/openclaw.json.bak.2026-07-11T00-00-00-000Z
-   模型数: 18 个文本对话模型
-   主模型: fireworks-hub/DeepSeek-V4-Flash
-   备选链: 17 个模型
-   密钥存储: 直接写入（明文）
-
-   主模型 & 备选链:
-   ★ fireworks-hub/DeepSeek-V4-Flash
-     fireworks-hub/DeepSeek-V4-Pro
-     fireworks-hub/DeepSeek-V3.2
-     ...
-
-重启 OpenClaw 后生效。
-```
-
-### 列出模型
-
-```
-🛰️  聚星逸 · 可用模型列表（动态获取）
-   共 40 个模型，其中 30 个文本对话模型
-
-⚡ Flash（快速）
-  DeepSeek-V4-Flash                    128K ctx   推理     DeepSeek V4 Flash (聚星逸) ← 默认
-  Gemini-3.5-Flash                     1024K ctx          Gemini 3 5 Flash (聚星逸)
-  GLM-5-Turbo                          128K ctx          GLM 5 Turbo (聚星逸)
-  ...
-
-🚀 Pro（主力）
-  DeepSeek-V4-Pro                      128K ctx   推理     DeepSeek V4 Pro (聚星逸)
-  GPT-5.5                              128K ctx   推理     GPT 5 5 (聚星逸)
-  claude-opus-4-8                      195K ctx   推理     Claude Opus 4 8 (聚星逸)
-  ...
-
-🧠 Reasoner（深度推理）
-  DeepSeek-R1-0528                     128K ctx   推理     DeepSeek R1-0528 (聚星逸)
-  GPT-5.4                              128K ctx   推理     GPT 5 4 (聚星逸)
-  claude-opus-4-7                      195K ctx   推理     Claude Opus 4 7 (聚星逸)
-  ...
-
-🎬 生图/视频模型（不配置文本对话）
-  GPT-Image-2
-  Doubao-Seedream-5.0
-  ...
-```
-
----
-
 ## 模型分类规则
 
 脚本从 `/v1/models` 动态获取后，用 `data/model-heuristics.json` 分类：
 
 1. **跳过模型**：含 `Image` / `Seedream` / `T2V` / `I2V` / `happyhorse` 的模型 ID 不配置文本对话
 2. **已知模型**：`knownModels` 中有精确元数据（reasoning / contextWindow / maxTokens / tier）
-3. **未知模型**：按名称模式匹配推断 tier（`Flash/Turbo` → flash，`R1` → reasoner，`Pro/Max` → pro），用默认参数
+3. **未知模型**：按名称模式匹配推断 tier（`Flash/Turbo` → flash，`R1` → reasoner，`Pro/Max` → pro）
 4. **排序**：flash → pro → reasoner，同 tier 按字母序
 
 > **平台新增模型后，无需更新本 skill**——脚本会自动发现并分类。
@@ -169,10 +134,16 @@ huo15-juxingyi-configure/
 ├── README.md                      # 本文件
 ├── CLAUDE.md                      # 开发规范
 ├── LICENSE                        # MIT
+├── .gitignore                     # skill 级忽略
 ├── data/
-│   └── model-heuristics.json      # 模型分类启发式数据
-└── scripts/
-    └── configure.mjs              # 零依赖配置脚本（Node 18+）
+│   └── model-heuristics.json      # 模型分类启发式数据（30 个已知模型）
+├── scripts/
+│   └── configure.mjs              # 零依赖配置脚本（Node 18+）
+└── docs/
+    ├── prd.md                     # 产品需求文档
+    ├── user-guide.md              # 用户手册 SOP
+    ├── dev-guide.md               # 开发者 SOP
+    └── changelog.md               # 版本变更历史
 ```
 
 ---
@@ -185,25 +156,33 @@ huo15-juxingyi-configure/
 
 ---
 
-## License
+## 文档
 
-[MIT](LICENSE) — 自由商用 / 修改 / 再发布。需保留版权声明。
+| 文档 | 说明 |
+|------|------|
+| [用户手册 SOP](docs/user-guide.md) | 面向终端用户的标准操作流程 |
+| [开发者 SOP](docs/dev-guide.md) | 面向接手开发的架构内幕、运维流程、踩坑经验 |
+| [PRD](docs/prd.md) | 产品需求文档 |
+| [变更历史](docs/changelog.md) | 版本变更记录 |
 
 ---
 
-## 联系方式
+## License
 
-| 项目 | 值 |
-|------|-----|
-| **公司** | 青岛火一五信息科技有限公司 |
-| **邮箱** | postmaster@huo15.com |
-| **QQ群** | 1093992108 |
-| **官网** | https://www.huo15.com |
+[MIT](LICENSE) — 自由商用 / 修改 / 再发布。需保留版权声明 `Copyright (c) 2026 青岛火一五信息科技有限公司`。
 
 ---
 
 <div align="center">
 
+**公司名称：** 青岛火一五信息科技有限公司
+
+**联系邮箱：** postmaster@huo15.com | **QQ群：** 1093992108
+
+---
+
 **关注逸寻智库公众号，获取更多资讯**
+
+<img src="https://tools.huo15.com/uploads/images/system/qrcode_yxzk.jpg" alt="逸寻智库公众号二维码" style="width: 200px; height: auto; margin: 10px 0;" />
 
 </div>

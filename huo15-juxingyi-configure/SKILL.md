@@ -218,10 +218,16 @@ huo15-juxingyi-configure/
 ├── README.md                      # 详细文档
 ├── CLAUDE.md                      # 开发规范（内部）
 ├── LICENSE                        # MIT
+├── .gitignore
 ├── data/
 │   └── model-heuristics.json      # 模型分类启发式数据
-└── scripts/
-    └── configure.mjs              # 零依赖配置脚本（Node 18+）
+├── scripts/
+│   └── configure.mjs              # 零依赖配置脚本（Node 18+）
+└── docs/
+    ├── prd.md                     # 产品需求文档
+    ├── user-guide.md              # 用户手册 SOP
+    ├── dev-guide.md               # 开发者 SOP
+    └── changelog.md               # 版本变更历史
 ```
 
 ---
