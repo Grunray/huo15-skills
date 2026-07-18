@@ -1,8 +1,8 @@
 ---
 name: huo15-douyin-video-summary
 displayName: 抖音视频去水印总结
-version: 1.0.0
-description: "给一个抖音视频链接，自动下载无水印视频、提取音频、语音转写(ASR)、LLM总结内容文稿与章节结构。支持一键全流程或分步执行。兼容OpenAI Whisper/SenseVoice等转写模型及任意OpenAI兼容LLM。触发词：抖音总结、抖音文稿、视频总结、视频转文字、去水印下载、douyin summary。"
+version: 1.1.0
+description: "给一个抖音视频链接，下载无水印视频并提取音频，然后配合 huo15-openclaw-asr 转写、由 OpenClaw 自身生成内容总结文稿与章节结构。脚本只做确定性下载/转码工作，转写复用 ASR skill，总结由 OpenClaw LLM 完成——无需配置任何 API key。触发词：抖音总结、抖音文稿、视频总结、视频转文字、去水印下载、douyin summary。"
 homepage: https://cnb.cool/huo15/ai/huo15-skills
 metadata: { "openclaw": { "emoji": "🎬", "requires": { "bins": ["yt-dlp", "ffmpeg"] } } }
 aliases:
@@ -18,134 +18,135 @@ aliases:
 
 # 抖音视频去水印 + 内容总结
 
-> 给一个抖音视频链接 → 下载无水印视频 → 语音转写 → LLM 总结文稿 + 章节分析
+> 抖音视频链接 → 下载无水印视频 + 提取音频 → ASR 转写 → OpenClaw 生成总结文稿
+
+遵循 OpenClaw 原则 **"enhance the runtime, never duplicate it"**：
+- **脚本只做确定性工作**：yt-dlp 下载、ffmpeg 转码（LLM 做不了的外部命令）
+- **转写复用 `huo15-openclaw-asr` skill**：不重复造轮子
+- **总结由 OpenClaw 本身完成**：OpenClaw 就是 LLM，无需脚本调 API
+
+**零 API key 配置。**
 
 ---
 
-## 能力
+## 工作流程
 
-| 功能 | 说明 |
-|---|---|
-| 下载去水印 | yt-dlp 从抖音 API 获取无水印源，自动导入浏览器 cookies |
-| 提取音频 | ffmpeg 转 16kHz 单声道 wav（适配 ASR） |
-| 语音转写 | OpenAI 兼容 `/v1/audio/transcriptions`（Whisper / SenseVoice 等） |
-| 内容总结 | LLM 生成结构化 Markdown 文稿（一句话总结 + 详细总结 + 要点 + 标签） |
-| 章节分析 | LLM 输出 JSON 章节结构（标题 / 摘要 / 要点） |
-
----
-
-## 依赖
-
-```bash
-# 必需命令
-brew install yt-dlp ffmpeg        # macOS
-# pip install yt-dlp               # 或 pip
-
-# API 配置（二选一）
-export DY_API_BASE=https://your-api/v1    # OpenAI 兼容 API 地址
-export DY_API_KEY=sk-xxx                  # API Key
-
-# 可选模型覆盖
-export DY_ASR_MODEL=whisper-1             # 转写模型（默认 whisper-1）
-export DY_LLM_MODEL=gpt-4o-mini           # 总结模型（默认 gpt-4o-mini）
+```
+用户给抖音链接
+    │
+    ▼
+[1] 脚本 scripts/douyin_download.py
+    yt-dlp 下载无水印视频 → ffmpeg 提取 audio.mp3
+    │
+    ▼
+[2] 复用 huo15-openclaw-asr skill
+    audio.mp3 → Whisper 本地转写 → transcript.txt
+    │
+    ▼
+[3] OpenClaw 自身（LLM）
+    transcript.txt → 生成总结文稿 + 章节分析
 ```
 
-> **零 Python 第三方依赖**：仅用标准库（urllib/json/subprocess），无需 pip install。
-
 ---
 
-## 用法
-
-### 一键全流程（推荐）
+## 步骤 1：下载去水印视频 + 提取音频
 
 ```bash
-python3 scripts/douyin_summary.py all "https://v.douyin.com/xxxxx/" \
-  --api-base https://api.example.com/v1 \
-  --api-key sk-xxx
+python3 scripts/douyin_download.py "https://v.douyin.com/xxxxx/" -o ./output
 ```
 
 输出：
-```
-output/
-├── video.mp4          无水印视频
-├── audio.wav          音频
-├── transcript.json    逐句转录（带 segments）
-├── transcript.txt     纯文本转录
-├── summary.md         总结文稿（Markdown）
-└── chapters.json      章节结构（JSON）
-```
+- `output/video.mp4` — 无水印视频（yt-dlp 从抖音 API 获取无水印源）
+- `output/audio.mp3` — 音频（MP3 格式，ASR skill 的标准输入）
 
-### 分步执行
+**依赖**：`yt-dlp` + `ffmpeg`（macOS: `brew install yt-dlp ffmpeg`）
 
-```bash
-# 1. 仅下载去水印视频 + 提取音频
-python3 scripts/douyin_summary.py download "https://v.douyin.com/xxxxx/" -o ./output
-
-# 2. 仅语音转写（需先有视频/音频）
-python3 scripts/douyin_summary.py transcribe ./output/video.mp4 \
-  --api-base https://api.example.com/v1 --api-key sk-xxx
-
-# 3. 仅 LLM 总结（需先有 transcript.json）
-python3 scripts/douyin_summary.py summarize ./output/transcript.json \
-  --api-base https://api.example.com/v1 --api-key sk-xxx --model gpt-4o-mini
-```
+**无水印原理**：yt-dlp 的 Douyin extractor 从抖音 API 获取 `play_addr`（无水印源），非录屏去水印。抖音需浏览器 fresh cookies，脚本自动从 Chrome/Safari/Firefox 导入（无需登录态）。
 
 ---
 
-## 输出说明
+## 步骤 2：转写（复用 ASR skill）
 
-### summary.md（总结文稿）
+拿到 `audio.mp3` 后，**调用 `huo15-openclaw-asr` skill** 做转写：
+
+- 本地优先：openai-whisper（`whisper "audio.mp3" --model base --language Chinese`）
+- 说话人分离：WhisperX
+- 云端（可选）：`huo15-openclaw-asr-bailian`（百炼 Paraformer）
+
+转写产出 `transcript.txt`（逐字原文）。
+
+> 不要在本 skill 内重复实现 ASR——那是 `huo15-openclaw-asr` 的职责。
+
+---
+
+## 步骤 3：内容总结（OpenClaw 自身）
+
+OpenClaw 拿到转录文本后，**直接生成总结**（OpenClaw 本身就是 LLM，无需脚本调 API）。建议输出格式：
 
 ```markdown
 ### 📌 一句话总结
 （视频核心内容）
 
 ### 📝 详细总结
-（300-600 字逻辑段落）
+（300-600 字，按逻辑段落组织）
 
 ### 🔑 关键要点
 - 要点 1
 - 要点 2
 
+### 📑 章节结构
+1. [章节标题] — 摘要
+2. [章节标题] — 摘要
+
 ### 🏷️ 标签
 #话题1 #话题2
 ```
 
-### chapters.json（章节结构）
-
-```json
-{
-  "title": "视频标题",
-  "topic": "主题",
-  "type": "知识科普",
-  "chapters": [
-    { "chapterId": 1, "title": "章节标题", "summary": "摘要", "keyPoints": ["要点"] }
-  ]
-}
-```
+总结须严格基于转录原文，不杜撰未出现的信息。
 
 ---
 
-## 兼容的 ASR 服务
+## 依赖
 
-| 服务 | api_base | asr_model |
+| 依赖 | 用途 | 安装 |
 |---|---|---|
-| OpenAI Whisper | `https://api.openai.com/v1` | `whisper-1` |
-| 自托管 SenseVoice | `http://sensevoice:9080/v1` | `SenseVoice` |
-| SiliconFlow | `https://api.siliconflow.cn/v1` | `FunAudioLLM/SenseVoiceSmall` |
-| 聚星逸平台 | `https://fireworks-simulator-api.huo15.com/v1` | `SenseVoice` |
+| yt-dlp | 下载无水印视频 | `brew install yt-dlp` |
+| ffmpeg | 提取音频 | `brew install ffmpeg` |
+| huo15-openclaw-asr | 语音转写 | `clawhub install huo15-openclaw-asr` |
+
+转写依赖见 `huo15-openclaw-asr` 文档（openai-whisper / WhisperX）。
+
+---
+
+## 对话示例
+
+```
+用户: 帮我总结这个抖音视频 https://v.douyin.com/xxxxx/
+Agent: [步骤1] 运行 douyin_download.py 下载无水印视频...
+       ✅ video.mp4 (58MB) + audio.mp3 (3MB)
+       [步骤2] 调用 huo15-openclaw-asr 转写 audio.mp3...
+       ✅ 转录完成 (4500字)
+       [步骤3] 基于转录生成总结：
+
+       ### 📌 一句话总结
+       ...
+
+       ### 📝 详细总结
+       ...
+```
 
 ---
 
 ## 注意事项
 
-1. **抖音 cookies**：yt-dlp 下载抖音需要 fresh cookies，脚本自动从浏览器导入（Chrome 优先），无需登录态
-2. **无水印原理**：yt-dlp 的 Douyin extractor 从抖音 API 获取 `play_addr`（无水印源），非录屏去水印
-3. **音频上限**：OpenAI Whisper 限 25MB；长视频建议用自托管 SenseVoice（无限制）
-4. **合规**：仅用于个人学习分析，不二次分发原视频；总结文稿为 AI 生成
+1. **抖音 cookies**：脚本自动从浏览器导入，无需登录态
+2. **合规**：仅用于个人学习分析，不二次分发原视频
+3. **长视频**：Whisper 本地转写长视频较慢，可改用 `huo15-openclaw-asr-bailian` 云端
+4. **音频格式**：脚本输出 MP3（非 WAV），体积小，是 ASR skill 的标准输入格式
 
 ---
 
 ## 版本历史
 
-- **v1.0.0**（2026-07）— 首版：下载去水印 + ASR 转录 + LLM 总结 + 章节分析
+- **v1.1.0**（2026-07）— 架构重构：脚本只做下载+音频提取，转写交给 `huo15-openclaw-asr`，总结交给 OpenClaw 自身。零 API key 配置，遵循 "enhance the runtime, never duplicate it"
+- v1.0.0 — 首版（含内置 ASR/LLM API 调用，已废弃）
