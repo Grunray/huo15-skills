@@ -51,7 +51,7 @@ huo15-juxingyi-configure/
 ├── data/
 │   └── model-heuristics.json      # 模型分类启发式数据（30 个已知模型 + tier 规则）
 ├── scripts/
-│   └── configure.mjs              # 核心脚本（385 行），所有逻辑在此
+│   └── configure.mjs              # 核心脚本（561 行），所有逻辑在此
 └── docs/
     ├── prd.md                     # 产品需求文档
     ├── user-guide.md              # 用户手册 SOP
@@ -144,11 +144,13 @@ huo15-juxingyi-configure/
 
 `tierPatterns` 中 `Mini` 关键词太宽泛，`MiniMax-M2.7` 被匹配。
 
-**解决**：在 `knownModels` 中为每个 MiniMax 模型指定精确 tier。`tierPatterns` 只是未知模型的 fallback。
+**解决（v1.0）**：在 `knownModels` 中为每个 MiniMax 模型指定精确 tier。`tierPatterns` 只是未知模型的 fallback。
 
-### 坑 2：`deepMerge` 函数定义了但未使用
+**根治（v1.1）**：`tierPatterns.flash` 里的 `Mini` 改为 `\bMini\b`（词边界匹配），从根上避免 `MiniMax` 被误匹配。`--selftest` 内置断言 `guessTier('MiniMax-M99') !== 'flash'` 持续守护。
 
-开发初期设计了深度合并，后来改为直接覆盖 `fireworks-hub` 段（更安全可预测）。函数保留但未调用。
+### 坑 2：`deepMerge` 函数定义了但未使用（已清理）
+
+开发初期设计了深度合并，后来改为直接覆盖 `fireworks-hub` 段（更安全可预测）。**v1.1.1 已删除该死代码**。
 
 ### 坑 3：GitHub 推送可能失败
 

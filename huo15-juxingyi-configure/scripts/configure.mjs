@@ -12,6 +12,9 @@
  *   node configure.mjs --switch <model-id>          # 切换主模型
  *   node configure.mjs --show                       # 查看当前聚星逸配置
  *   node configure.mjs <fsk-key> --env              # 用环境变量引用存储密钥
+ *   node configure.mjs --help                        # 显示帮助
+ *   node configure.mjs --version                     # 显示版本号
+ *   node configure.mjs --selftest                    # 运行内置自检（不联网）
  *
  * 零依赖，仅需 Node 18+（自带 fetch）。
  * 青岛火一五信息科技有限公司
@@ -25,6 +28,16 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OPENCLAW_JSON = join(homedir(), '.openclaw', 'openclaw.json')
 const HEURISTICS_PATH = join(__dirname, '..', 'data', 'model-heuristics.json')
+const META_PATH = join(__dirname, '..', '_meta.json')
+
+// ============================================================
+// Node 版本检查（需要 18+ 的原生 fetch）
+// ============================================================
+const NODE_MAJOR = parseInt(process.versions.node.split('.')[0], 10)
+if (NODE_MAJOR < 18) {
+  console.error(`\u274c 需要 Node.js 18+（当前 ${process.versions.node}）。\n   Node 18+ 自带 fetch API，请升级: https://nodejs.org/`)
+  process.exit(1)
+}
 
 // ============================================================
 // 参数解析
@@ -35,6 +48,9 @@ const flags = {
   json: args.includes('--json'),
   show: args.includes('--show'),
   env: args.includes('--env'),
+  help: args.includes('--help') || args.includes('-h'),
+  version: args.includes('--version') || args.includes('-v'),
+  selftest: args.includes('--selftest'),
 }
 const switchIdx = args.indexOf('--switch')
 const switchModel = switchIdx >= 0 ? args[switchIdx + 1] : null
@@ -79,6 +95,23 @@ function fmtModelName(id) {
   return id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
+// 模型 ID 解析：精确 → 大小写不敏感 → 前缀匹配（唯一则用，歧义则报错）
+function resolveModelId(input, modelIds) {
+  if (modelIds.includes(input)) return input
+  const lower = input.toLowerCase()
+  const ci = modelIds.find(m => m.toLowerCase() === lower)
+  if (ci) return ci
+  // 前缀匹配（大小写不敏感），仅当唯一时才采用
+  const prefixMatches = modelIds.filter(m => m.toLowerCase().startsWith(lower))
+  if (prefixMatches.length === 1) return prefixMatches[0]
+  if (prefixMatches.length > 1) {
+    console.error(`\u26a0\ufe0f  "${input}" 匹配到多个模型，请更精确地指定:`)
+    for (const m of prefixMatches) console.error(`     ${m}`)
+    process.exit(1)
+  }
+  return null
+}
+
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, '-')
 }
@@ -88,16 +121,37 @@ function timestamp() {
 // ============================================================
 async function fetchModels(apiKey) {
   const url = `${BASE_URL}/models`
-  const resp = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  }).catch(e => { throw new Error(`网络请求失败: ${e.message}`) })
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 15000)
+  let resp
+  try {
+    resp = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: ctrl.signal,
+    })
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error(`请求超时（15s）: ${url}\n   请检查网络或稍后重试。`)
+    }
+    throw new Error(`网络请求失败: ${e.message}\n   请检查网络连接或 Base URL 是否可达。`)
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (!resp.ok) {
     const body = await resp.text().catch(() => '')
-    throw new Error(`API 返回 ${resp.status}: ${body.slice(0, 200)}`)
+    let hint = ''
+    if (resp.status === 401) hint = '\n   提示: 密钥无效或已过期，请到聚星逸控制台确认。'
+    else if (resp.status === 403) hint = '\n   提示: 密钥权限不足。'
+    else if (resp.status >= 500) hint = '\n   提示: 聚星逸服务端异常，请稍后重试。'
+    throw new Error(`API 返回 ${resp.status}: ${body.slice(0, 200)}${hint}`)
   }
   const data = await resp.json()
-  return data.data || data.models || []
+  const models = data.data || data.models || []
+  if (!Array.isArray(models) || models.length === 0) {
+    throw new Error('API 返回的模型列表为空。\n   请检查密钥权限或联系聚星逸支持。')
+  }
+  return models
 }
 
 // ============================================================
@@ -179,26 +233,14 @@ function writeOpenclawJson(config) {
 }
 
 // ============================================================
-// 深度合并（provider 级别覆盖，其他保留）
-// ============================================================
-function deepMerge(target, source) {
-  for (const key of Object.keys(source)) {
-    if (
-      source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) &&
-      target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])
-    ) {
-      deepMerge(target[key], source[key])
-    } else {
-      target[key] = source[key]
-    }
-  }
-  return target
-}
-
-// ============================================================
 // 主逻辑
 // ============================================================
 async function main() {
+  // --- help / version / selftest（不联网、不读写配置）---
+  if (flags.help) return cmdHelp()
+  if (flags.version) return cmdVersion()
+  if (flags.selftest) return cmdSelftest()
+
   // --- show 模式 ---
   if (flags.show) {
     return cmdShow()
@@ -214,9 +256,15 @@ async function main() {
     console.error(
       '用法: node configure.mjs <fsk-key> [--list|--json|--env]\n' +
       '      node configure.mjs --switch <model-id>\n' +
-      '      node configure.mjs --show\n\n' +
+      '      node configure.mjs --show | --help | --version | --selftest\n\n' +
       '缺少聚星逸 API Key（fsk- 开头）。'
     )
+    process.exit(1)
+  }
+
+  // 校验密钥格式（fsk- 后应有内容）
+  if (keyArg.length <= 4) {
+    console.error('❌ 聚星逸 API Key 格式错误: fsk- 后应有密钥内容。')
     process.exit(1)
   }
 
@@ -354,8 +402,7 @@ function cmdSwitch(modelId) {
   }
 
   const modelIds = (prov.models || []).map(m => m.id)
-  const fullId = modelIds.includes(modelId) ? modelId :
-                 modelIds.find(m => m.toLowerCase() === modelId.toLowerCase())
+  const fullId = resolveModelId(modelId, modelIds)
 
   if (!fullId) {
     console.error(`模型 "${modelId}" 不在聚星逸可用列表中。`)
@@ -430,6 +477,81 @@ function cmdShow() {
     }
   }
   console.log()
+}
+
+// ============================================================
+// 子命令: help / version / selftest
+// ============================================================
+function cmdHelp() {
+  const meta = JSON.parse(readFileSync(META_PATH, 'utf8'))
+  console.log(`
+聚星逸配置 · huo15-juxingyi-configure v${meta.version}
+
+用法:
+  node configure.mjs <fsk-key>              配置 provider + 全部模型（默认 DeepSeek-V4-Flash）
+  node configure.mjs <fsk-key> --list       动态获取并列出所有可用模型
+  node configure.mjs <fsk-key> --json       输出 JSON 配置片段（不写文件）
+  node configure.mjs <fsk-key> --env        用环境变量引用存储密钥（更安全）
+  node configure.mjs --switch <model-id>    切换主模型（支持前缀匹配）
+  node configure.mjs --show                 查看当前聚星逸配置
+  node configure.mjs --help | -h            显示本帮助
+  node configure.mjs --version | -v         显示版本号
+  node configure.mjs --selftest             运行内置自检（不联网，不读写配置）
+
+环境变量:
+  ${H.envVarName}                 --env 模式下从此环境变量读取密钥
+
+更多信息: https://cnb.cool/huo15/ai/huo15-skills
+`)
+}
+
+function cmdVersion() {
+  const meta = JSON.parse(readFileSync(META_PATH, 'utf8'))
+  console.log(`huo15-juxingyi-configure v${meta.version}`)
+}
+
+function cmdSelftest() {
+  let pass = 0, fail = 0
+  const ok = (name, cond, detail = '') => {
+    if (cond) { pass++; console.log(`  \u2713 ${name}`) }
+    else { fail++; console.log(`  \u2717 ${name} ${detail}`) }
+  }
+
+  console.log('\n\ud83e\uddea 内置自检（不联网）\n')
+
+  // 1. 启发式数据加载
+  ok('model-heuristics.json 已加载', !!H.knownModels)
+  ok('knownModels 非空', Object.keys(H.knownModels).length > 0)
+  ok('skipPatterns 是数组', Array.isArray(H.skipPatterns) && H.skipPatterns.length > 0)
+  ok('tierPatterns 三档齐全', ['flash', 'pro', 'reasoner'].every(t => H.tierPatterns[t]))
+
+  // 2. classifyModel 分类
+  ok('生图模型被跳过 (Image)', classifyModel('Foo-Image-Bar') === null)
+  ok('视频模型被跳过 (T2V)', classifyModel('Foo-T2V-Bar') === null)
+  ok('已知模型返回精确参数', H.knownModels['DeepSeek-V4-Flash']?.tier === 'flash')
+  ok('未知模型走推断', classifyModel('SomeModel-Pro')?.tier === 'pro')
+
+  // 3. tier 推断
+  ok('guessTier Flash → flash', guessTier('X-Flash') === 'flash')
+  ok('guessTier Turbo → flash', guessTier('X-Turbo') === 'flash')
+  ok('guessTier R1 → reasoner', guessTier('X-R1') === 'reasoner')
+  ok('guessTier Pro → pro', guessTier('X-Pro') === 'pro')
+  ok('guessTier MiniMax 不误判为 flash', guessTier('MiniMax-M99') !== 'flash')
+
+  // 4. 模型名格式化
+  ok('fmtModelName 美化', fmtModelName('deepseek-v4-flash') === 'Deepseek V4 Flash')
+
+  // 5. resolveModelId 解析
+  ok('resolveModelId 精确匹配', resolveModelId('DeepSeek-V4-Flash', ['DeepSeek-V4-Flash', 'GPT-5.5']) === 'DeepSeek-V4-Flash')
+  ok('resolveModelId 大小写不敏感', resolveModelId('deepseek-v4-flash', ['DeepSeek-V4-Flash']) === 'DeepSeek-V4-Flash')
+  ok('resolveModelId 前缀唯一匹配', resolveModelId('gpt', ['GPT-5.5', 'DeepSeek-V4-Flash']) === 'GPT-5.5')
+  ok('resolveModelId 无匹配返回 null', resolveModelId('NotExist', ['DeepSeek-V4-Flash']) === null)
+
+  // 6. tierWeight 排序权重
+  ok('tierWeight flash<pro<reasoner', tierWeight('flash') < tierWeight('pro') && tierWeight('pro') < tierWeight('reasoner'))
+
+  console.log(`\n  结果: ${pass} 通过, ${fail} 失败\n`)
+  if (fail > 0) process.exit(1)
 }
 
 // ============================================================

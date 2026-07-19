@@ -2,6 +2,33 @@
 
 ---
 
+## v1.1.1（2026-07-19）
+
+**健壮性增强与代码质量提升。**（远程 1.1.0 已被 7-11 旧内容占用，跳 +1 patch 发布）
+
+### 新增
+
+- **`--help` / `-h` 子命令**：显示完整用法说明
+- **`--version` / `-v` 子命令**：从 `_meta.json` 读取并显示版本号
+- **`--selftest` 子命令**：不联网、不读写配置的内置自检（19 项断言），验证 `classifyModel` / `guessTier` / `resolveModelId` / `fmtModelName` / `tierWeight` 等纯函数逻辑
+- **`--switch` 前缀匹配**：`resolveModelId` 按 精确 → 大小写不敏感 → 前缀唯一 三级解析，歧义时列出候选并退出
+- **Node 版本检查**：Node < 18 时给出友好提示（而非 `fetch is not defined`）
+- **API Key 格式校验**：`fsk-` 后必须有内容
+- **`fetchModels` 增强**：15s 超时（AbortController）+ 错误分类（401 密钥无效 / 403 权限不足 / 5xx 服务异常 / 超时）+ 空模型列表防护
+
+### 变更
+
+- **根治 MiniMax 误判**：`data/model-heuristics.json` 的 `tierPatterns.flash` 里 `Mini` 改为 `\bMini\b`（词边界匹配），`MiniMax-*` 不再被误判为 flash
+- **删除死代码**：移除从未调用的 `deepMerge` 函数
+
+### 文档
+
+- 同步 `CLAUDE.md` / `docs/dev-guide.md` 的脚本行数（385 → 561）、架构图、关键函数表、踩坑记录
+- `dev-guide.md` 自查 checklist 与测试段补充 `--selftest`
+- `SKILL.md` §四命令速查表补充 `--help` / `--version` / `--selftest`
+
+---
+
 ## v1.0.0（2026-07-11）
 
 **首版发布。**

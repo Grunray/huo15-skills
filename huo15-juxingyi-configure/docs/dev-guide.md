@@ -42,7 +42,7 @@ huo15-juxingyi-configure/
 ├── data/
 │   └── model-heuristics.json      # 模型分类数据（已知模型元数据 + tier 模式匹配规则）
 ├── scripts/
-│   └── configure.mjs              # 核心脚本（385行），所有逻辑在此
+│   └── configure.mjs              # 核心脚本（561行），所有逻辑在此
 └── docs/
     ├── prd.md                     # 产品需求文档
     ├── user-guide.md              # 用户手册 SOP
@@ -53,21 +53,26 @@ huo15-juxingyi-configure/
 ### 2.3 configure.mjs 架构
 
 ```
-参数解析 → 加载 model-heuristics.json
+参数解析 → Node 版本检查 → 加载 model-heuristics.json
     │
-    ├── --show     → cmdShow()     读 openclaw.json，展示当前配置
-    ├── --switch   → cmdSwitch()   读/写 openclaw.json，切换主模型
-    ├── <key> --list → fetchModels() + cmdList()   动态获取，展示
-    ├── <key> --json  → fetchModels() + cmdJson()   动态获取，输出 JSON
-    └── <key>         → fetchModels() + cmdConfigure()  动态获取，写入 openclaw.json
+    ├── --help/-h      → cmdHelp()       显示帮助
+    ├── --version/-v   → cmdVersion()    读 _meta.json，显示版本
+    ├── --selftest     → cmdSelftest()   不联网，跑内置断言（19 项）
+    ├── --show         → cmdShow()       读 openclaw.json，展示当前配置
+    ├── --switch X     → cmdSwitch()     读/写 openclaw.json，切换主模型（支持前缀匹配）
+    ├── <key> --list   → fetchModels() + cmdList()       动态获取，展示
+    ├── <key> --json   → fetchModels() + cmdJson()       动态获取，输出 JSON
+    └── <key>          → fetchModels() + cmdConfigure()  动态获取，写入 openclaw.json
 ```
 
 **关键函数**：
-- `fetchModels(apiKey)` — 调 `GET /v1/models`
+- `fetchModels(apiKey)` — 调 `GET /v1/models`，带 15s 超时 + 错误分类（401/403/5xx）+ 空列表防护
 - `classifyModel(id)` — 三级分类：skipPatterns → knownModels → tierPatterns 推断
+- `guessTier(id)` / `resolveModelId(input, ids)` — tier 推断 / 模型 ID 解析（精确→大小写不敏感→前缀唯一）
 - `buildProviderConfig(apiKey, rawModels)` — 生成 provider JSON 片段
 - `buildAgentsDefaults(textModels, primaryId)` — 生成 primary + fallbacks + aliases
 - `writeOpenclawJson(config)` — 备份 + 写入
+- `cmdSelftest()` — 不联网的内置自检（19 项断言，验证分类/解析逻辑）
 
 ---
 
@@ -91,6 +96,9 @@ node -v
 ```bash
 # 语法检查
 node --check scripts/configure.mjs
+
+# 内置自检（不联网，验证分类/解析逻辑）
+node scripts/configure.mjs --selftest
 
 # 列出模型（用真实 key 测试动态获取）
 node scripts/configure.mjs fsk-测试key --list
@@ -213,13 +221,13 @@ git push cnb main
 
 **解决**：CNB 是主库，GitHub 是镜像。CNB 推成功即可，GitHub 失败不阻塞发布。
 
-### 坑 2：`deepMerge` 函数未使用
+### 坑 2：`deepMerge` 函数未使用（已清理）
 
 **现象**：`configure.mjs` 中定义了 `deepMerge` 但没调用。
 
 **原因**：开发初期设计了深度合并，后来改为直接覆盖 `fireworks-hub` 段（更安全、更可预测）。
 
-**状态**：保留函数定义（未来可能用到），但不影响运行。
+**状态**：**v1.1.1 已删除该死代码**，不再保留。
 
 ### 坑 3：MiniMax 模型被误判为 flash
 
@@ -227,7 +235,9 @@ git push cnb main
 
 **原因**：`Mini` 关键词太宽泛。
 
-**解决**：在 `knownModels` 中为每个 MiniMax 模型指定精确 tier。`tierPatterns` 只是未知模型的 fallback。
+**解决（v1.0）**：在 `knownModels` 中为每个 MiniMax 模型指定精确 tier。`tierPatterns` 只是未知模型的 fallback。
+
+**根治（v1.1）**：`tierPatterns.flash` 里的 `Mini` 改为 `\bMini\b`（词边界匹配），`MiniMax` 不再被误匹配。`--selftest` 内置断言 `guessTier('MiniMax-M99') !== 'flash'` 持续守护。
 
 ### 坑 4：SKILL.md 中不能出现品牌违禁词
 
@@ -302,7 +312,10 @@ python3 -c "import json; json.load(open('_meta.json'))"
 node scripts/configure.mjs --show
 node scripts/configure.mjs fsk-测试key --list
 
-# 6. git 状态
+# 6. 内置自检（不联网，验证分类/解析逻辑）
+node scripts/configure.mjs --selftest
+
+# 7. git 状态
 git status
 ```
 

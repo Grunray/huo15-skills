@@ -1,7 +1,7 @@
 ---
 name: huo15-juxingyi-configure
 displayName: 聚星逸配置
-version: 1.0.0
+version: 1.1.1
 description: "将聚星逸大模型聚合平台接入 OpenClaw——动态拉取最新可用模型列表，自动写入 openclaw.json 的 providers 段，默认设 DeepSeek-V4-Flash 为主模型，配好后询问用户是否切换。一个 fsk- 密钥调 50+ 顶级大模型。"
 homepage: https://github.com/zhaobod1/huo15-skills
 metadata: { "openclaw": { "emoji": "🛰️", "requires": { "bins": ["node"] } } }
@@ -124,8 +124,11 @@ node <skill_dir>/scripts/configure.mjs --show
 | `node configure.mjs <fsk-key> --list` | 动态获取并列出所有可用模型 |
 | `node configure.mjs <fsk-key> --json` | 输出 JSON 配置片段（不写文件） |
 | `node configure.mjs <fsk-key> --env` | 用环境变量引用存储密钥（更安全） |
-| `node configure.mjs --switch <model-id>` | 切换主模型 |
+| `node configure.mjs --switch <model-id>` | 切换主模型（支持前缀匹配） |
 | `node configure.mjs --show` | 查看当前聚星逸配置 |
+| `node configure.mjs --help` / `-h` | 显示帮助 |
+| `node configure.mjs --version` / `-v` | 显示版本号 |
+| `node configure.mjs --selftest` | 内置自检（不联网，不读写配置） |
 
 > `<skill_dir>` = 本 skill 安装目录，通常为 `~/.openclaw/workspace/skills/huo15-juxingyi-configure`
 
@@ -234,6 +237,7 @@ huo15-juxingyi-configure/
 
 ## 十、版本
 
+- **v1.1.1**（2026-07-19）: 健壮性增强 — 删除死代码 `deepMerge`；加 Node 版本检查与密钥格式校验；`fetchModels` 加 15s 超时 + 错误分类（401/403/5xx）+ 空列表防护；新增 `--help`/`--version`/`--selftest` 子命令；`--switch` 支持前缀匹配；根治 MiniMax 误判（`Mini` → `\bMini\b`）。（注：远程 1.1.0 已被 7-11 旧内容占用，跳 +1 patch 发布）
 - **v1.0.0**（2026-07-11）: 首版 — 动态获取模型列表，自动配置 openclaw.json，默认 DeepSeek-V4-Flash，支持切换
 
 ---

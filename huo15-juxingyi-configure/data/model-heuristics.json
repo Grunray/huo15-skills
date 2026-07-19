@@ -43,7 +43,7 @@
   },
 
   "tierPatterns": {
-    "flash":    ["Flash", "Turbo", "lite", "highspeed", "Mini"],
+    "flash":    ["Flash", "Turbo", "lite", "highspeed", "\\bMini\\b"],
     "reasoner": ["R1", "reasoner", "thinking", "o1", "o3"],
     "pro":      ["Pro", "Max", "Opus", "Plus", "Sonnet"]
   },

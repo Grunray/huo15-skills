@@ -27,7 +27,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.1.1-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0-blue)
 ![ClawHub](https://img.shields.io/badge/ClawHub-published-ff6b6b)
