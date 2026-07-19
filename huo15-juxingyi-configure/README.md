@@ -27,7 +27,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.2.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.3.0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0-blue)
 ![ClawHub](https://img.shields.io/badge/ClawHub-published-ff6b6b)
@@ -43,8 +43,9 @@
 1. **接口实时拉取**:每次运行都从聚星逸 `/v1/models` 接口获取最新可用模型列表
 2. **自动写入**:`~/.openclaw/openclaw.json` 的 `fireworks-hub` provider 段
 3. **主模型取列表第一个**:配完后主动询问是否切换
-4. **灵活切换**:随时用 `--switch` 换主模型
-5. **安全可靠**:写入前自动备份,支持环境变量引用存储密钥
+4. **日常更新**:`--update` 保留当前主模型,只刷新模型列表(平台新增模型后日常刷新)
+5. **灵活切换**:随时用 `--switch` 换主模型
+6. **安全可靠**:写入前自动备份,支持环境变量引用存储密钥
 
 > **模型列表完全来自接口,不维护任何本地硬编码清单**——平台新增模型无需更新本 skill。
 > 接入文档:https://fireworks-simulator.huo15.com/docs.html
@@ -93,11 +94,14 @@ openclaw restart
 
 | 命令 | 说明 |
 |------|------|
-| `node configure.mjs <fsk-key>` | 拉取模型列表并写入配置(主模型取列表第一个) |
+| `node configure.mjs <fsk-key>` | 首次配置:拉取模型列表并写入(主模型取列表第一个) |
 | `node configure.mjs <fsk-key> --list` | 只列出接口返回的模型(不写文件) |
-| `node configure.mjs <fsk-key> --env` | 用环境变量引用存储密钥(更安全) |
+| `node configure.mjs <fsk-key> --update` | **日常更新模型列表(保留当前主模型)** |
+| `node configure.mjs <fsk-key> --env` | 首次配置时用环境变量引用存储密钥(更安全) |
 | `node configure.mjs --switch <model-id>` | 切换主模型(支持前缀匹配) |
 | `node configure.mjs --show` | 查看当前聚星逸配置 |
+| `node configure.mjs --help` / `-h` | 显示帮助 |
+| `node configure.mjs --version` / `-v` | 显示版本号 |
 | `node configure.mjs --help` / `-h` | 显示帮助 |
 | `node configure.mjs --version` / `-v` | 显示版本号 |
 

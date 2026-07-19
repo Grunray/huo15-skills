@@ -52,7 +52,7 @@ huo15-juxingyi-configure/
 ├── LICENSE                        # MIT
 ├── .gitignore                     # skill 级忽略
 ├── scripts/
-│   └── configure.mjs              # 核心脚本(445 行),所有逻辑在此
+│   └── configure.mjs              # 核心脚本(540 行),所有逻辑在此
 └── docs/
     ├── prd.md                     # 产品需求文档
     ├── user-guide.md              # 用户手册 SOP
@@ -74,7 +74,8 @@ huo15-juxingyi-configure/
     ├── --show         → cmdShow()       读 openclaw.json,展示当前配置
     ├── --switch X     → cmdSwitch()     读/写 openclaw.json,切换主模型(支持前缀匹配)
     ├── <key> --list   → fetchModels() + cmdList()       调接口,展示
-    └── <key>          → fetchModels() + cmdConfigure()  调接口,写入 openclaw.json
+    ├── <key> --update → fetchModels() + cmdUpdate()     调接口,保留主模型刷新模型列表
+    └── <key>          → fetchModels() + cmdConfigure()  调接口,写入 openclaw.json(首次配置)
 ```
 
 ### 关键函数
@@ -84,6 +85,7 @@ huo15-juxingyi-configure/
 | `fetchModels(apiKey)` | 调 `GET /v1/models`,带 15s 超时 + 错误分类(401/403/5xx)+ 空列表防护 |
 | `toModelEntry(id)` | 单个模型配置项:`id` + `name` + 保守默认参数 |
 | `buildConfig(apiKey, rawModels)` | 生成 provider + agents.defaults(primary 取第一个 + fallbacks + aliases) |
+| `cmdUpdate(newProvider, textModels, skipped)` | **日常更新**:保留当前主模型,只刷新模型列表,报告新增/移除 |
 | `resolveModelId(input, ids)` | 模型 ID 解析:精确 → 大小写不敏感 → 前缀唯一 |
 | `readOpenclawJson()` | 读取 `~/.openclaw/openclaw.json` |
 | `writeOpenclawJson(config)` | 备份 + 写入 |

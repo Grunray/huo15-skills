@@ -170,7 +170,31 @@ node scripts/configure.mjs --switch claude-opus-4-8
 
 ### 重新配置(平台新增了模型)
 
-直接重新运行配置脚本即可,它会调接口拿最新列表:
+**日常更新推荐用 `--update`(保留当前主模型)**:
+
+```bash
+node scripts/configure.mjs fsk-你的密钥 --update
+```
+
+`--update` 与重新配置(不加 `--update`)的区别:
+- `--update`:**保留当前主模型**(若仍在平台列表),只刷新模型列表,报告新增/移除
+- 不加 `--update`:主模型重置为列表第一个(适合从头重新配置)
+
+`--update` 输出示例:
+```
+✅ 聚星逸模型列表已更新!
+   备份: ~/.openclaw/openclaw.json.bak.2026-07-19T...
+   模型数: 18 → 20 个文本对话模型
+   ✨ 新增 2 个:
+     + NewModel-X1
+     + NewModel-X2
+   主模型保留: fireworks-hub/DeepSeek-V4-Flash
+   备选链: 19 个模型
+
+重启 OpenClaw 后生效。
+```
+
+**想从头重新配置**(不保留主模型):
 
 ```bash
 node scripts/configure.mjs fsk-你的密钥
@@ -275,12 +299,17 @@ openclaw restart
 
 ### Q5:平台新增了模型,怎么更新配置?
 
-**解决**:直接重新运行配置脚本:
+**解决**:用 `--update` 日常更新(保留当前主模型):
+```bash
+node scripts/configure.mjs fsk-你的密钥 --update
+```
+
+脚本会调接口拿最新列表,报告新增/移除的模型,保留你当前选的主模型。无需更新 skill 本身。
+
+如果想从头重新配置(不保留主模型),直接运行:
 ```bash
 node scripts/configure.mjs fsk-你的密钥
 ```
-
-脚本会调接口拿最新列表,自动包含新模型。无需更新 skill 本身。
 
 ### Q6:主模型不是我想要的
 
@@ -297,8 +326,11 @@ node scripts/configure.mjs --switch 你想要的模型名
 
 ```bash
 # ── 配置 ──
-node scripts/configure.mjs <fsk-key>           # 配置(主模型取列表第一个)
+node scripts/configure.mjs <fsk-key>           # 首次配置(主模型取列表第一个)
 node scripts/configure.mjs <fsk-key> --env     # 配置(密钥用环境变量)
+
+# ── 日常更新 ──
+node scripts/configure.mjs <fsk-key> --update  # 更新模型列表(保留当前主模型)
 
 # ── 查看 ──
 node scripts/configure.mjs --show              # 查看当前配置

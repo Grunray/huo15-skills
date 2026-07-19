@@ -52,6 +52,7 @@ if (NODE_MAJOR < 18) {
 const args = process.argv.slice(2)
 const flags = {
   list: args.includes('--list'),
+  update: args.includes('--update'),
   show: args.includes('--show'),
   env: args.includes('--env'),
   help: args.includes('--help') || args.includes('-h'),
@@ -226,7 +227,7 @@ async function main() {
   // --- 以下模式需要 API key ---
   if (!keyArg) {
     console.error(
-      '用法: node configure.mjs <fsk-key> [--list|--env]\n' +
+      '用法: node configure.mjs <fsk-key> [--list|--update|--env]\n' +
       '      node configure.mjs --switch <model-id>\n' +
       '      node configure.mjs --show | --help | --version\n\n' +
       '缺少聚星逸 API Key(fsk- 开头)。'
@@ -247,7 +248,10 @@ async function main() {
   // --- list 模式 ---
   if (flags.list) return cmdList(rawModels, textModels, skipped)
 
-  // --- 默认: 写入 openclaw.json ---
+  // --- update 模式: 只刷新模型列表,保留主模型 ---
+  if (flags.update) return cmdUpdate(provider, textModels, skipped)
+
+  // --- 默认: 写入 openclaw.json(首次配置,主模型取列表第一个) ---
   return cmdConfigure(provider, agents, textModels, skipped)
 }
 
@@ -317,6 +321,96 @@ function cmdConfigure(provider, agents, textModels, skipped) {
   }
 
   console.log('重启 OpenClaw 后生效。')
+}
+
+// ============================================================
+// cmdUpdate: 日常更新模型列表(保留主模型,只刷新 providers 段)
+//
+// 与 cmdConfigure(首次配置)的区别:
+//   - cmdConfigure: 主模型取列表第一个,重置 fallbacks
+//   - cmdUpdate: 保留当前主模型(若仍在列表中),只刷新模型列表
+// 适用场景: 平台新增了模型,想拉取最新列表但不改自己选的主模型
+// ============================================================
+function cmdUpdate(newProvider, textModels, skipped) {
+  const config = readOpenclawJson()
+  const oldProv = config.models?.providers?.[PROVIDER]
+
+  if (!oldProv) {
+    console.error(`未找到 ${PROVIDER} provider,请先运行配置: node configure.mjs <fsk-key>`)
+    process.exit(1)
+  }
+
+  // 当前主模型
+  const oldPrimary = config.agents?.defaults?.model?.primary || null
+  const oldPrimaryId = oldPrimary ? oldPrimary.replace(`${PROVIDER}/`, '') : null
+
+  // 旧 / 新模型 ID 列表
+  const oldIds = (oldProv.models || []).map(m => m.id)
+  const newIds = textModels.map(m => m.id)
+
+  // 决定主模型:旧主仍在列表 → 保留;否则取列表第一个并提示
+  let primary, primaryChanged = false
+  if (oldPrimaryId && newIds.includes(oldPrimaryId)) {
+    primary = `${PROVIDER}/${oldPrimaryId}`
+  } else {
+    primary = `${PROVIDER}/${newIds[0]}`
+    primaryChanged = !!oldPrimaryId // 之前有主模型但现在不在列表 = 被下架
+  }
+
+  // fallbacks = 新列表除 primary 外的全部
+  const fallbacks = newIds.filter(id => `${PROVIDER}/${id}` !== primary).map(id => `${PROVIDER}/${id}`)
+
+  // aliases 重新生成
+  const aliases = {}
+  for (const m of textModels) {
+    aliases[`${PROVIDER}/${m.id}`] = { alias: m.name }
+  }
+
+  // 保留原密钥存储方式(明文 / env 引用都不动,更新模型列表不该改密钥)
+  newProvider.apiKey = oldProv.apiKey
+
+  // 写入 provider
+  config.models.providers[PROVIDER] = newProvider
+
+  // 写入 agents.defaults
+  if (!config.agents) config.agents = {}
+  if (!config.agents.defaults) config.agents.defaults = {}
+  config.agents.defaults.model = { primary, fallbacks }
+
+  // aliases: 清理旧 fireworks-hub 条目,写入新的(保留非 fireworks-hub 条目)
+  const existing = config.agents.defaults.models || {}
+  for (const key of Object.keys(existing)) {
+    if (key.startsWith(`${PROVIDER}/`)) delete existing[key]
+  }
+  for (const [key, val] of Object.entries(aliases)) {
+    existing[key] = val
+  }
+  config.agents.defaults.models = existing
+
+  const bak = writeOpenclawJson(config)
+
+  // 报告变更
+  const added = newIds.filter(id => !oldIds.includes(id))
+  const removed = oldIds.filter(id => !newIds.includes(id))
+
+  console.log(`\n✅ 聚星逸模型列表已更新!`)
+  console.log(`   备份: ${bak}`)
+  console.log(`   模型数: ${oldIds.length} → ${newIds.length} 个文本对话模型${skipped.length ? `(跳过 ${skipped.length} 个生图/视频)` : ''}`)
+  if (added.length) {
+    console.log(`   ✨ 新增 ${added.length} 个:`)
+    added.forEach(id => console.log(`     + ${id}`))
+  }
+  if (removed.length) {
+    console.log(`   🗑️  移除 ${removed.length} 个:`)
+    removed.forEach(id => console.log(`     - ${id}`))
+  }
+  if (primaryChanged) {
+    console.log(`   ⚠️  旧主模型 ${oldPrimary} 已不在平台列表(可能下架),主模型切换为 ${primary}`)
+  } else {
+    console.log(`   主模型保留: ${primary}`)
+  }
+  console.log(`   备选链: ${fallbacks.length} 个模型`)
+  console.log(`\n重启 OpenClaw 后生效。`)
 }
 
 function cmdSwitch(modelId) {
@@ -419,7 +513,8 @@ function cmdHelp() {
 用法:
   node configure.mjs <fsk-key>            拉取模型列表并写入配置(主模型取列表第一个)
   node configure.mjs <fsk-key> --list     只列出接口返回的模型(不写文件)
-  node configure.mjs <fsk-key> --env      密钥用环境变量 ${ENV_VAR} 引用(更安全)
+  node configure.mjs <fsk-key> --update   日常更新模型列表(保留当前主模型)
+  node configure.mjs <fsk-key> --env      密钥用环境变量 ${ENV_VAR} 引用(首次配置时更安全)
   node configure.mjs --switch <model-id>  切换主模型(支持前缀匹配)
   node configure.mjs --show               查看当前聚星逸配置
   node configure.mjs --help | -h          显示本帮助

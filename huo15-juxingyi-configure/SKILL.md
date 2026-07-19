@@ -1,8 +1,8 @@
 ---
 name: huo15-juxingyi-configure
 displayName: 聚星逸配置
-version: 1.2.0
-description: "用聚星逸 fsk- 密钥调 /v1/models 接口,把最新模型列表写入 openclaw.json。模型列表完全来自接口实时返回,不依赖本地硬编码数据。一个 Key 调 50+ 顶级大模型。"
+version: 1.3.0
+description: "用聚星逸 fsk- 密钥调 /v1/models 接口,把最新模型列表写入 openclaw.json。模型列表完全来自接口实时返回,不依赖本地硬编码数据。支持日常更新(--update 保留主模型)、切换、查看。一个 Key 调 50+ 顶级大模型。"
 homepage: https://github.com/zhaobod1/huo15-skills
 metadata: { "openclaw": { "emoji": "🛰️", "requires": { "bins": ["node"] } } }
 aliases:
@@ -113,13 +113,50 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 四、脚本命令速查
+## 四、日常更新模型列表(平台新增了模型)
+
+**当用户说"更新一下聚星逸模型"/"拉取最新模型列表"/"平台加了新模型"时,用 `--update`**:
+
+```bash
+node <skill_dir>/scripts/configure.mjs <fsk-key> --update
+```
+
+与首次配置(`<fsk-key>`)的区别:
+- **首次配置**(无 `--update`):主模型取接口返回列表的第一个,重置 fallbacks
+- **日常更新**(`--update`):**保留用户当前选定的主模型**(若仍在平台列表中),只刷新 providers 段的模型列表
+
+`--update` 做什么:
+1. 调 `/v1/models` 接口拿最新模型列表
+2. 对比旧列表,报告新增 / 移除的模型
+3. **保留当前主模型**(若仍在列表中);若旧主模型已下架(不在新列表),自动切到列表第一个并提示
+4. 重新生成 fallbacks(新列表中除主模型外的全部)
+5. 保留原密钥存储方式(明文 / env 引用都不动)
+6. 自动备份
+
+输出示例:
+```
+✅ 聚星逸模型列表已更新!
+   备份: ~/.openclaw/openclaw.json.bak.2026-07-19T...
+   模型数: 18 → 20 个文本对话模型
+   ✨ 新增 2 个:
+     + NewModel-X1
+     + NewModel-X2
+   主模型保留: fireworks-hub/DeepSeek-V4-Flash
+   备选链: 19 个模型
+
+重启 OpenClaw 后生效。
+```
+
+> **何时用 `--update` vs 重新配置**:已配置过且想保留主模型选择 → 用 `--update`;想从头重新配置 → 不加 `--update`。
+
+## 五、脚本命令速查
 
 | 命令 | 用途 |
 |------|------|
-| `node configure.mjs <fsk-key>` | 拉取模型列表并写入配置(主模型取列表第一个) |
+| `node configure.mjs <fsk-key>` | 首次配置:拉取模型列表并写入(主模型取列表第一个) |
 | `node configure.mjs <fsk-key> --list` | 只列出接口返回的模型(不写文件) |
-| `node configure.mjs <fsk-key> --env` | 用环境变量引用存储密钥(更安全) |
+| `node configure.mjs <fsk-key> --update` | **日常更新模型列表(保留当前主模型)** |
+| `node configure.mjs <fsk-key> --env` | 首次配置时用环境变量引用存储密钥(更安全) |
 | `node configure.mjs --switch <model-id>` | 切换主模型(支持前缀匹配) |
 | `node configure.mjs --show` | 查看当前聚星逸配置 |
 | `node configure.mjs --help` / `-h` | 显示帮助 |
@@ -129,7 +166,7 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 五、模型列表来源
+## 六、模型列表来源
 
 **模型列表完全来自聚星逸 `/v1/models` 接口实时返回,本 skill 不维护任何本地模型清单。**
 
@@ -143,7 +180,7 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 六、openclaw.json 配置结构
+## 七、openclaw.json 配置结构
 
 配置完成后,`~/.openclaw/openclaw.json` 中新增/更新的段:
 
@@ -188,7 +225,7 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 七、安全注意
+## 八、安全注意
 
 - API Key 默认**明文写入** openclaw.json。如需更安全,加 `--env` 用环境变量引用:
   ```bash
@@ -200,7 +237,7 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 八、硬红线
+## 九、硬红线
 
 1. ❌ **不在任何文件中硬编码 API Key** — 用户每次提供
 2. ❌ **不跳过接口获取** — 必须调 `/v1/models`,不用本地清单
@@ -210,7 +247,7 @@ node <skill_dir>/scripts/configure.mjs --show
 
 ---
 
-## 九、文件清单
+## 十、文件清单
 
 ```
 huo15-juxingyi-configure/
@@ -231,9 +268,10 @@ huo15-juxingyi-configure/
 
 ---
 
-## 十、版本
+## 十一、版本
 
-- **v1.2.0**(2026-07-19): 架构简化 — 删除 `data/model-heuristics.json` 及所有本地硬编码分类逻辑(knownModels/tierPatterns/skipPatterns);模型列表完全来自 `/v1/models` 接口实时返回;主模型改为取接口返回列表的第一个(不再硬编码 DeepSeek-V4-Flash);生图/视频过滤改为脚本内通用正则;删除 `--json` / `--selftest` 子命令;模型参数填保守默认值(接口不返回精确参数)。
+- **v1.3.0**(2026-07-19): 新增 `--update` 子命令 — 日常更新模型列表(保留当前主模型,只刷新 providers 段);对比旧列表报告新增/移除;旧主模型下架时自动切换并提示;保留原密钥存储方式。与首次配置(重置主模型)区分,适合平台新增模型后日常刷新。
+- **v1.2.0**(2026-07-19): 架构简化 — 删除 `data/model-heuristics.json` 及所有本地硬编码分类逻辑(knownModels/tierPatterns/skipPatterns);模型列表完全来自 `/v1/models` 接口实时返回;主模型改为取接口返回列表的第一个(不再硬编码 DeepSeek-V4-Flash);生图/视频过滤改为脚本内通用正则;删除 `--json`/`--selftest` 子命令;模型参数填保守默认值(接口不返回精确参数)。
 - **v1.1.1**(2026-07-19): 健壮性增强 — Node 版本检查、密钥校验、fetchModels 超时与错误分类、`--help`/`--version`/`--selftest` 子命令、`--switch` 前缀匹配、MiniMax 误判根治。
 - **v1.0.0**(2026-07-11): 首版 — 动态获取模型列表,自动配置 openclaw.json,默认 DeepSeek-V4-Flash,支持切换。
 
