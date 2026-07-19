@@ -11,7 +11,7 @@
 <div align="center">
 
 <h3>一个 Key 调 50+ 顶级大模型</h3>
-<h3>动态拉取 · 自动配置 · 零 token 探索</h3>
+<h3>接口实时拉取 · 自动写入 · 零本地硬编码</h3>
 
 </div>
 
@@ -27,7 +27,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.1.1-brightgreen)
+![Version](https://img.shields.io/badge/version-1.2.0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0-blue)
 ![ClawHub](https://img.shields.io/badge/ClawHub-published-ff6b6b)
@@ -38,15 +38,16 @@
 
 ## 这是什么
 
-`huo15-juxingyi-configure` 是 OpenClaw 专用 skill，帮你快速接入聚星逸（Juxingyi）大模型聚合平台：
+`huo15-juxingyi-configure` 是 OpenClaw 专用 skill,帮你快速接入聚星逸(Juxingyi)大模型聚合平台:
 
-1. **动态拉取**：每次运行都从 `/v1/models` 端点获取最新可用模型列表
-2. **自动分类**：文本对话模型 vs 生图/视频模型（自动跳过后者），按 tier 分组
-3. **一键配置**：自动写入 `~/.openclaw/openclaw.json`，设 `DeepSeek-V4-Flash` 为主模型
-4. **灵活切换**：配置后询问是否切换，随时用 `--switch` 换主模型
-5. **安全可靠**：写入前自动备份，支持环境变量引用存储密钥
+1. **接口实时拉取**:每次运行都从聚星逸 `/v1/models` 接口获取最新可用模型列表
+2. **自动写入**:`~/.openclaw/openclaw.json` 的 `fireworks-hub` provider 段
+3. **主模型取列表第一个**:配完后主动询问是否切换
+4. **灵活切换**:随时用 `--switch` 换主模型
+5. **安全可靠**:写入前自动备份,支持环境变量引用存储密钥
 
-> **不用每次消耗 token 去探索配置格式和模型列表**——SKILL.md 嵌入完整知识，脚本动态获取最新数据。
+> **模型列表完全来自接口,不维护任何本地硬编码清单**——平台新增模型无需更新本 skill。
+> 接入文档:https://fireworks-simulator.huo15.com/docs.html
 
 ---
 
@@ -55,7 +56,7 @@
 ### 安装
 
 ```bash
-# 从 ClawHub 安装（推荐）
+# 从 ClawHub 安装(推荐)
 clawhub install huo15-juxingyi-configure --dir ~/.openclaw/workspace/skills
 
 # 或从源码安装
@@ -67,7 +68,7 @@ cp -r huo15-skills/huo15-juxingyi-configure/ ~/.openclaw/workspace/skills/
 
 **1. 获取聚星逸 API Key**
 
-打开 [聚星逸控制台](https://fireworks-simulator.huo15.com/app/) →「API 密钥」页，创建一个 `fsk-` 开头的密钥。
+打开 [聚星逸控制台](https://fireworks-simulator.huo15.com/app/) →「API 密钥」页,创建一个 `fsk-` 开头的密钥。
 
 **2. 运行配置脚本**
 
@@ -76,7 +77,7 @@ cd ~/.openclaw/workspace/skills/huo15-juxingyi-configure
 node scripts/configure.mjs <fsk-key>
 ```
 
-脚本动态拉取最新模型列表，自动分类并写入 `~/.openclaw/openclaw.json`，默认设 `DeepSeek-V4-Flash` 为主模型。
+脚本调 `/v1/models` 接口拉取最新模型列表,自动写入 `~/.openclaw/openclaw.json`,主模型取接口返回列表的第一个。
 
 **3. 重启 OpenClaw**
 
@@ -92,32 +93,34 @@ openclaw restart
 
 | 命令 | 说明 |
 |------|------|
-| `node configure.mjs <fsk-key>` | 配置 provider + 全部模型，默认 DeepSeek-V4-Flash |
-| `node configure.mjs <fsk-key> --list` | 动态获取并列出所有可用模型 |
-| `node configure.mjs <fsk-key> --json` | 输出 JSON 配置片段（不写文件） |
-| `node configure.mjs <fsk-key> --env` | 用环境变量引用存储密钥（更安全） |
-| `node configure.mjs --switch <model-id>` | 切换主模型 |
+| `node configure.mjs <fsk-key>` | 拉取模型列表并写入配置(主模型取列表第一个) |
+| `node configure.mjs <fsk-key> --list` | 只列出接口返回的模型(不写文件) |
+| `node configure.mjs <fsk-key> --env` | 用环境变量引用存储密钥(更安全) |
+| `node configure.mjs --switch <model-id>` | 切换主模型(支持前缀匹配) |
 | `node configure.mjs --show` | 查看当前聚星逸配置 |
+| `node configure.mjs --help` / `-h` | 显示帮助 |
+| `node configure.mjs --version` / `-v` | 显示版本号 |
 
 ---
 
-## 模型分类规则
+## 模型列表来源
 
-脚本从 `/v1/models` 动态获取后，用 `data/model-heuristics.json` 分类：
+**模型列表完全来自聚星逸 `/v1/models` 接口实时返回,本 skill 不维护任何本地模型清单。**
 
-1. **跳过模型**：含 `Image` / `Seedream` / `T2V` / `I2V` / `happyhorse` 的模型 ID 不配置文本对话
-2. **已知模型**：`knownModels` 中有精确元数据（reasoning / contextWindow / maxTokens / tier）
-3. **未知模型**：按名称模式匹配推断 tier（`Flash/Turbo` → flash，`R1` → reasoner，`Pro/Max` → pro）
-4. **排序**：flash → pro → reasoner，同 tier 按字母序
+脚本处理逻辑:
+1. 调 `GET /v1/models` 拿到平台当前所有可用模型
+2. 跳过生图/视频模型(ID 含 `image`/`seedream`/`t2v`/`i2v`/`video`/`dall-e`/`happyhorse`)——不能用于文本对话
+3. 剩余文本模型全部写入配置
+4. 主模型取接口返回列表的第一个,其余作 fallbacks
 
-> **平台新增模型后，无需更新本 skill**——脚本会自动发现并分类。
+> **关于模型参数**:接口 `/v1/models` 只返回 `id`/`owned_by`,不返回上下文窗口等参数。脚本除 `id`/`name` 外填保守默认值(`contextWindow`: 131072, `maxTokens`: 8192, `reasoning`: false)保证 OpenClaw 可用,可手动调整。
 
 ---
 
 ## 安全建议
 
-- **默认**：API Key 明文写入 `openclaw.json`，最简单
-- **更安全**：加 `--env` 用环境变量引用：
+- **默认**:API Key 明文写入 `openclaw.json`,最简单
+- **更安全**:加 `--env` 用环境变量引用:
   ```bash
   node configure.mjs <fsk-key> --env
   export FIREWORKS_API_KEY=fsk-你的密钥
@@ -129,16 +132,14 @@ openclaw restart
 
 ```
 huo15-juxingyi-configure/
-├── SKILL.md                       # ClawHub 嵌入源（≤ 25KB）
+├── SKILL.md                       # ClawHub 嵌入源(≤ 25KB)
 ├── _meta.json                     # ClawHub 元数据
 ├── README.md                      # 本文件
 ├── CLAUDE.md                      # 开发规范
 ├── LICENSE                        # MIT
 ├── .gitignore                     # skill 级忽略
-├── data/
-│   └── model-heuristics.json      # 模型分类启发式数据（30 个已知模型）
 ├── scripts/
-│   └── configure.mjs              # 零依赖配置脚本（Node 18+）
+│   └── configure.mjs              # 零依赖配置脚本(Node 18+)
 └── docs/
     ├── prd.md                     # 产品需求文档
     ├── user-guide.md              # 用户手册 SOP
@@ -152,7 +153,7 @@ huo15-juxingyi-configure/
 
 | 场景 | 配套 skill |
 |------|-----------|
-| 查询 token 用量/费用 | [`huo15-yh-usage`](../huo15-yh-usage/)（凭 fsk- 查账单）|
+| 查询 token 用量/费用 | [`huo15-yh-usage`](../huo15-yh-usage/)(凭 fsk- 查账单)|
 
 ---
 
@@ -175,13 +176,13 @@ huo15-juxingyi-configure/
 
 <div align="center">
 
-**公司名称：** 青岛火一五信息科技有限公司
+**公司名称:** 青岛火一五信息科技有限公司
 
-**联系邮箱：** postmaster@huo15.com | **QQ群：** 1093992108
+**联系邮箱:** postmaster@huo15.com | **QQ群:** 1093992108
 
 ---
 
-**关注逸寻智库公众号，获取更多资讯**
+**关注逸寻智库公众号,获取更多资讯**
 
 <img src="https://tools.huo15.com/uploads/images/system/qrcode_yxzk.jpg" alt="逸寻智库公众号二维码" style="width: 200px; height: auto; margin: 10px 0;" />
 
