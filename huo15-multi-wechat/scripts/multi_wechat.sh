@@ -1,5 +1,5 @@
 #!/bin/bash
-# 微信多开脚本 — 复制完整微信应用并修改 Bundle ID + 重新签名
+# 微信多开脚本 — 复制完整微信应用并修改 Bundle ID + 重命名可执行文件 + 重新签名
 # 用法: bash multi_wechat.sh [数量]  (默认 2)
 set -e
 
@@ -13,9 +13,10 @@ if [ ! -d "$ORIGINAL_APP" ]; then
     exit 1
 fi
 
-# 获取原版 Bundle ID
+# 获取原版 Bundle ID 和可执行文件名
 ORIGINAL_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$ORIGINAL_APP/Contents/Info.plist")
-echo "Original WeChat bundle ID: $ORIGINAL_BUNDLE_ID"
+ORIGINAL_EXEC=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$ORIGINAL_APP/Contents/Info.plist")
+echo "Original WeChat: bundle ID=$ORIGINAL_BUNDLE_ID, executable=$ORIGINAL_EXEC"
 
 # 清理旧的副本（可能需要管理员权限）
 NEED_SUDO=""
@@ -41,40 +42,62 @@ fi
 for i in $(seq 2 $((COUNT + 1))); do
     APP_PATH="/Applications/WeChat${i}.app"
     NEW_BUNDLE_ID="${ORIGINAL_BUNDLE_ID}${i}"
+    NEW_EXEC="WeChat${i}"
 
     echo ""
     echo "=== Creating WeChat${i}.app ==="
 
-    # 复制完整应用
+    # 1. 复制完整应用
     echo "Copying..."
     cp -R "$ORIGINAL_APP" "$APP_PATH"
 
-    # 修改 Bundle ID
+    # 2. 修改 Bundle ID（绕过微信单实例锁）
     echo "Modifying CFBundleIdentifier -> $NEW_BUNDLE_ID"
     /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_BUNDLE_ID" "$APP_PATH/Contents/Info.plist"
 
-    # 修改显示名
+    # 3. 重命名可执行文件（绕过 Launch Services 缓存，让 open 命令也能多开）
+    echo "Renaming executable: $ORIGINAL_EXEC -> $NEW_EXEC"
+    cp "$APP_PATH/Contents/MacOS/$ORIGINAL_EXEC" "$APP_PATH/Contents/MacOS/$NEW_EXEC"
+    chmod +x "$APP_PATH/Contents/MacOS/$NEW_EXEC"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $NEW_EXEC" "$APP_PATH/Contents/Info.plist"
+
+    # 4. 修改显示名
     /usr/libexec/PlistBuddy -c "Set :CFBundleName WeChat${i}" "$APP_PATH/Contents/Info.plist"
 
-    # 重新签名（ad-hoc）
+    # 5. 重新签名（ad-hoc）
     echo "Re-signing..."
     codesign --force --deep --sign - "$APP_PATH"
 
-    # 验证
+    # 6. 验证
     ACTUAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist")
-    echo "Verify: CFBundleIdentifier = $ACTUAL_ID"
+    ACTUAL_EXEC=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_PATH/Contents/Info.plist")
+    echo "Verify: CFBundleIdentifier=$ACTUAL_ID, CFBundleExecutable=$ACTUAL_EXEC"
     codesign -v "$APP_PATH" 2>&1 && echo "Signature: OK" || echo "Signature: FAILED"
 
     echo "✅ WeChat${i}.app created"
 done
 
+# 7. 重新注册到 Launch Services + 刷新 Dock
+echo ""
+echo "Refreshing Launch Services..."
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+for i in $(seq 2 $((COUNT + 1))); do
+    "$LSREGISTER" -f "/Applications/WeChat${i}.app"
+done
+killall Dock 2>/dev/null
+
 echo ""
 echo "=== All done! ==="
-echo "Original: WeChat.app ($ORIGINAL_BUNDLE_ID)"
+echo "Original: WeChat.app ($ORIGINAL_BUNDLE_ID, executable=$ORIGINAL_EXEC)"
 for i in $(seq 2 $((COUNT + 1))); do
-    echo "Copy $((i-1)):  WeChat${i}.app ($ORIGINAL_BUNDLE_ID${i})"
+    echo "Copy $((i-1)):  WeChat${i}.app ($ORIGINAL_BUNDLE_ID${i}, executable=WeChat${i})"
 done
 echo ""
-echo "Tip: Run 'killall Dock' to refresh Launchpad."
+echo "Now you can launch with:"
+echo "  open /Applications/WeChat.app   # original"
+for i in $(seq 2 $((COUNT + 1))); do
+    echo "  open /Applications/WeChat${i}.app"
+done
+echo ""
 echo "Note: First launch may be blocked by Gatekeeper — go to"
 echo "      System Settings > Privacy & Security > 'Open Anyway'"
