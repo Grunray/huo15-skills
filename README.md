@@ -25,7 +25,7 @@
 
 <div align="center">
 
-![Skills](https://img.shields.io/badge/skills-33-blue)
+![Skills](https://img.shields.io/badge/skills-34-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![OpenClaw](https://img.shields.io/badge/OpenClaw-compatible-orange)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-7c3aed)
@@ -97,7 +97,7 @@ huo15-skills/
 
 ## 技能列表（按类别）
 
-> 共 **33** 个 skill。全部采用 **MIT License**（可自由商用 / 修改 / 再发布，需保留版权声明 © 青岛火一五信息科技有限公司）。
+> 共 **34** 个 skill。全部采用 **MIT License**（可自由商用 / 修改 / 再发布，需保留版权声明 © 青岛火一五信息科技有限公司）。
 
 ### 一、OpenClaw 工程模式（PR / Plan / Verify / Explore）
 
@@ -111,6 +111,7 @@ huo15-skills/
 | [`huo15-openclaw-simplify`](huo15-openclaw-simplify/) | v1.0.0 | "复用 / 质量 / 效率"三维审查刚写完的代码 + 实际修复命中问题 |
 | [`huo15-openclaw-multi-agent`](huo15-openclaw-multi-agent/) | v2.2.1 | 基于 OpenClaw sessions_spawn 的多 Agent 并行工作系统（协调者模式 / 任务分配 / 结果汇总） |
 | [`huo15-openclaw-desktop-control`](huo15-openclaw-desktop-control/) | v1.0.0 | 火一五桌控（macOS 自动化心法）— desktop-control MCP 36 tool 的"AX 树优先 / act 必带 expect_after / 读 [state] 摘要"使用规范 |
+| [`huo15-dingtalk-agent-isolation`](huo15-dingtalk-agent-isolation/) | v1.0.0 | 钉钉智能体隔离 — 为每个钉钉用户创建独立 Agent 工作空间、记忆和会话历史，支持手动绑定和动态创建两种模式 |
 
 ### 二、学习与知识库
 
@@ -312,6 +313,7 @@ https://clawhub.ai/skills/huo15-openclaw-security-review
 https://clawhub.ai/skills/huo15-openclaw-simplify
 https://clawhub.ai/skills/huo15-openclaw-multi-agent
 https://clawhub.ai/skills/huo15-openclaw-desktop-control
+https://clawhub.ai/skills/huo15-dingtalk-agent-isolation
 https://clawhub.ai/skills/huo15-openclaw-openai-knowledge-base
 https://clawhub.ai/skills/huo15-openclaw-mit-48h-learning-method
 https://clawhub.ai/skills/huo15-karpathy-guidelines
