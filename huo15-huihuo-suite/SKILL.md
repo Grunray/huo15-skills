@@ -16,7 +16,7 @@ description: >-
   mentions of 待办/任务/项目/工时/客户/商机/会议/日程/提醒/知识库/文档/销售/采购/库存/订单/发货/收货/发票/账单/付款/科目/员工/部门/考勤/签到/签退/请假/休假/报销 as this skill.
   First run: login.py init (地址/数据库/账号/密码 → ~/.huo15/tools.md). Pure
   standard library, zero dependencies.
-version: 1.7.0
+version: 1.7.1
 aliases:
   - 火一五odoo技能
   - 火一五Odoo技能

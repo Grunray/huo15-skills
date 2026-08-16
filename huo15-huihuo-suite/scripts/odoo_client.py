@@ -299,8 +299,9 @@ class Odoo:
         return self.execute_kw(model, "unlink", [ids])
 
     def name_search(self, model, name, args=None, limit=10):
+        # Odoo 17+ 参数名从 args 改为 domain，旧写法会报 unexpected keyword argument
         return self.execute_kw(
-            model, "name_search", [], {"name": name, "args": args or [], "limit": limit}
+            model, "name_search", [], {"name": name, "domain": args or [], "limit": limit}
         )
 
     def fields_get(self, model, attributes=("string", "type")):
