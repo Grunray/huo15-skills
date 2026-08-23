@@ -267,7 +267,7 @@ def make_styles(preset, fonts: FontRegistry):
             leftIndent=14, bulletIndent=0,
             alignment=TA_JUSTIFY, spaceBefore=0, spaceAfter=3,
             wordWrap='CJK',
-            rightIndent=16,  # v7.9.2: 防闭标点落行首（粗体列表项需更大缓冲）
+            rightIndent=32,  # v7.9.2: 防闭标点落行首（粗体列表项需更大缓冲）
         ),
         'code': ParagraphStyle(
             'HuoCode', fontName=code_font,
